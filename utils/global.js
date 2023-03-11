@@ -12,5 +12,11 @@ export default {
             console.log(data)
             that.ws.send(JSON.stringify(data))
         }
+    },
+    color: {
+        spade: 0,   //黑桃
+        heart: 1,   //红桃
+        club: 2,    //花子
+        diamond: 3  //方片
     }
 }
