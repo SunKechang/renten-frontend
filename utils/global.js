@@ -9,8 +9,9 @@ export default {
         }
         let that = this
         this.ws.onopen = () => {
-            console.log(data)
-            that.ws.send(JSON.stringify(data))
+            if (that.ws.readyState === 1) {   
+                that.ws.send(JSON.stringify(data))
+            }
         }
     },
     color: {
