@@ -6,66 +6,6 @@
                 v-bind:initialize.prop="initialize"
             />
         </div>
-      <!-- <div v-if="roomInfo.roomId !== 0">房间信息：
-        <div>房间id：{{roomInfo.roomId}}</div>
-        <div>邀请好友：{{roomInfo.roomId}}</div>
-      </div>
-      <div v-for="(player) in players" :key="player.id" style="margin-top: 30px;">
-        <div v-if="player.id === roomInfo.roomMaster">房主</div>
-        <div v-if="player.id === selfInfo.id"><mark>玩家id：{{player.id}}</mark></div>
-        <div v-else>玩家id：{{player.id}}</div>
-        <div>玩家状态：</div>
-        <div v-if="player.status == 0">未就绪</div>
-        <div v-else-if="player.status == 1">已就绪</div>
-        <div v-else-if="player.status == 2">游戏中</div>
-        <div v-else-if="player.status == 3">明牌</div>
-        <div v-else-if="player.status == 4">走了</div>
-        <button v-if="player.id === selfInfo.id" @click="updateStatus(player.status)">{{ player.status == 0 ? '准备' : '取消准备'}}</button>
-      </div>
-      <div v-show="roomInfo.status >= 1">
-        牌区
-        <div style="display: flex; flex-direction: row;">
-            <div v-for="(puke, index) in pukeInfo.puke" :key="index">
-                <div>
-                    <div v-if="puke.value <= 10">
-                        {{puke.value}}
-                    </div>
-                    <div v-else-if="puke.value === 11">
-                        J
-                    </div>
-                    <div v-else-if="puke.value === 12">
-                        Q
-                    </div>
-                    <div v-else-if="puke.value === 13">
-                        K
-                    </div>
-                    <div v-else>王</div>
-                </div>
-                <div>
-                    <div v-if="puke.color === $global.color.spade">
-                        黑桃
-                    </div>
-                    <div v-else-if="puke.color === $global.color.heart">
-                        红桃
-                    </div>
-                    <div v-else-if="puke.color === $global.color.club">
-                        梅花
-                    </div>
-                    <div v-else>方片</div>
-                </div>
-            </div>
-        </div>
-      </div>
-      <div>
-        状态栏
-        <div v-show="roomInfo.restTime >= 0">
-            剩余时间：{{ roomInfo.restTime }}
-        </div>
-        <div>操作：
-            <button @click="showPoker">明牌</button>
-        </div>
-      </div> -->
-      
     </div>
   </template>
   
@@ -94,6 +34,9 @@ let timerPosition = [
     {x: 80, y: 45},     // 2号位置
     {x: 30, y: 60},     // 自己
 ]
+
+let pokerPage = 54
+let smallKing = 13*4
 
 function index2Pos(index) {
     if(index === vue.selfInfo.index) {
@@ -164,13 +107,13 @@ function addButton(content, widthPercent, heightPercent, that) {
 
 function renderPlayer(players, playerGroup, that) {
     playerGroup.clear(true, true)
+    let index = that.add.text(percent2Px(70, true), percent2Px(10, false), '座位：'+vue.selfInfo.index+'号', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+    playerGroup.add(index)
     for(let i=0;i<players.length;i++) {
         if(players[i].id === vue.selfInfo.id) {
             continue
         }
         let index = index2Pos(i)
-        console.log(i, index)
-        console.log(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y, false))
         let player = that.add.image(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y, false), 'player')
         let status = ''
         switch(players[i].status) {
@@ -190,11 +133,19 @@ function renderPlayer(players, playerGroup, that) {
                 status = '走人'
                 break
         }
-        console.log(status)
         let text = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+5, false), status, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
         if(players[i].puke !== undefined) {
-            let pokerNum = that.add.text(percent2Px(playerPosition[index].x-5, true), percent2Px(playerPosition[index].y+5, false), players[i].puke.length, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
+            let pokerNum = that.add.text(percent2Px(playerPosition[index].x-3, true), percent2Px(playerPosition[index].y+5, false), players[i].puke.length, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
             playerGroup.add(pokerNum)
+        }
+        if(players[i].group !== undefined) {
+            if(players[i].group === 1) {
+                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+10, false), '红十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+                playerGroup.add(playerTeam)
+            } else if(players[i].group === 2) {
+                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+10, false), '独十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+                playerGroup.add(playerTeam)
+            }
         }
         playerGroup.add(player)
         playerGroup.add(text)
@@ -234,6 +185,21 @@ function renderPlayButton(buttonGroup, pokerButtonGroup, that) {
     }
 }
 
+function renderScore(value, scoreGroup, that) {
+    scoreGroup.clear(true, true)
+    let startX = 30
+    let startY = 20
+    let scoreHeader = that.add.text(percent2Px(startX, true), percent2Px(startY-5, false), '座位\t队伍\t排名\t本局得分\t总得分', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'white'})
+    scoreGroup.add(scoreHeader)
+    for(let i=0;i<value.players.length;i++) {
+        let temp = value.players[i]
+        let playerScore = that.add.text(percent2Px(startX, true), percent2Px(startY + 5*i, false), vue.getIndexById(temp.id) + '号' + '\t' + temp.group + '\t' + temp.rank + '\t' + temp.single_score + '\t' + temp.score, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'yellow'})
+        scoreGroup.add(playerScore)
+    }
+    let winGroup = that.add.text(percent2Px(startX, true), percent2Px(startY + 5*value.players.length, false), '胜方：'+value.result, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'yellow'})
+    scoreGroup.add(winGroup)
+}
+
 
 
 let game = {
@@ -256,6 +222,19 @@ let game = {
             let timerGroup = this.add.group()
             let pokerButtonGroup = this.add.group()
             let lastPokerGroup = this.add.group()
+            let scoreGroup = this.add.group()
+            let extraGroup = this.add.group()
+            // 清屏
+            vue.$watch('roomInfo.status', (value)=> {
+                if(value === 1) {
+                    pokerGroup.clear(true, true)
+                    timerGroup.clear(true, true)
+                    pokerButtonGroup.clear(true, true)
+                    lastPokerGroup.clear(true, true)
+                    scoreGroup.clear(true, true)
+                    extraGroup.clear(true, true)
+                }
+            })
             // 渲染玩家状态
             vue.$watch('players', (value)=> {
                 renderPlayer(value, playerGroup, that)
@@ -268,7 +247,7 @@ let game = {
             })
 
             // 渲染分享链接
-            let url = this.add.text(percent2Px(70, true), percent2Px(5, false), vue.roomInfo.roomId, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
+            let url = this.add.text(percent2Px(70, true), percent2Px(5, false), vue.roomInfo.roomId, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
             vue.$watch('roomInfo.roomId', (value)=>{
                 url.setText(value)
             })
@@ -291,6 +270,9 @@ let game = {
             vue.$watch('playInfo', ()=> {
                 let value = vue.playInfo
                 timerGroup.clear(true, true)
+                if(value.onTurnIndex === -1) {
+                    return
+                }
                 let pos = index2Pos(value.onTurnIndex)
                 let restTime = this.add.text(percent2Px(timerPosition[pos].x + 4, true), percent2Px(timerPosition[pos].y, false), '', { fontSize: '24px', fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
                 let timer = this.add.image(percent2Px(timerPosition[pos].x, true), percent2Px(timerPosition[pos].y, false), 'timer')
@@ -306,7 +288,6 @@ let game = {
                 pokerButtonGroup.clear(true, true)
                 let cancelTemp = addButton('重选', 40, 60, that)
                 let runTemp = addButton('出牌', 50, 60, that)
-                let passTemp = addButton('过', 60, 60, that)
                 cancelTemp.button.setInteractive()
                 cancelTemp.button.on('pointerdown', ()=> {
                     pokerGroup.getChildren().forEach((poker)=> {
@@ -322,23 +303,23 @@ let game = {
                         }
                         poker.setData('chosen', false)
                     })
-                    console.log('chosenPokers')
-                    console.log(chosenPokers)
                     vue.sendPoker(chosenPokers)
                 })
-                passTemp.button.setInteractive()
-                passTemp.button.on('pointerdown', ()=> {
-                    vue.sendPass()
-                })
+                if(vue.lastPoker.action !== 'nextTurn') {
+                    let passTemp = addButton('过', 60, 60, that)
+                    passTemp.button.setInteractive()
+                    passTemp.button.on('pointerdown', ()=> {
+                        vue.sendPass()
+                    })
+                    pokerButtonGroup.add(passTemp.button)
+                    pokerButtonGroup.add(passTemp.text)
+                }
+                
                 pokerButtonGroup.add(cancelTemp.button)
                 pokerButtonGroup.add(cancelTemp.text)
                 pokerButtonGroup.add(runTemp.button)
                 pokerButtonGroup.add(runTemp.text)
-                pokerButtonGroup.add(passTemp.button)
-                pokerButtonGroup.add(passTemp.text)
-                if(vue.selfInfo.id !== 12) {
-                    vue.sendPass()
-                }
+                
             }, {
                 deep: true
             })
@@ -350,11 +331,42 @@ let game = {
                     poker.setDisplaySize(percent2Px(7, true), percent2Px(20, false))
                     lastPokerGroup.add(poker)
                 }
-                lastPokerGroup.incXY(percent2Px(40, true), percent2Px(45, false))
-
-                if(vue.playInfo.onTurnIndex !== vue.selfInfo.index) {
-                    // let breakButton = addButton('叉', 50, 60, that)
-                    // let backButton = addButton('勾', 50, 60, that)
+                lastPokerGroup.incXY(percent2Px(40, true), percent2Px(35, false))
+            })
+            vue.$watch('action', (value)=> {
+                extraGroup.clear(true, true)
+                if(value.break.able) {
+                    let breakTemp = addButton('叉', 70, 60, that)
+                    breakTemp.button.setInteractive()
+                    breakTemp.button.on('pointerdown', ()=> {
+                        vue.sendBreak()
+                    })
+                    extraGroup.add(breakTemp.button)
+                    extraGroup.add(breakTemp.text)
+                } else if (value.back.able) {
+                    let backTemp = addButton('钩', 70, 60, that)
+                    backTemp.button.setInteractive()
+                    backTemp.button.on('pointerdown', ()=> {
+                        vue.sendBack()
+                    })
+                    extraGroup.add(backTemp.button)
+                    extraGroup.add(backTemp.text)
+                }
+                console.log(value)
+            },{
+                deep: true
+            })
+            vue.$watch('scoreInfo', (value)=> {
+                renderScore(value, scoreGroup, that)
+            })
+            vue.$watch('connectFailed', (value)=> {
+                if(value) {
+                    that.add.text(percent2Px(50, true), percent2Px(50, false), '重连失败，您可以点击按钮创建房间', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
+                    let createTemp = addButton('创建房间', 50, 60, that)
+                    createTemp.button.setInteractive()
+                    createTemp.button.on('pointerdown', ()=> {
+                        vue.toCreateRoom()
+                    })
                 }
             })
             vue.onListen()
@@ -371,7 +383,7 @@ export default {
             roomInfo: {
                 roomId: 0,
                 roomMaster: 0,
-                status: 0,  //0 等待 1 明牌阶段 2 出牌
+                status: 0,  //0 等待 1 开始 2 出牌
             },
             selfInfo: {
                 id: 0,
@@ -382,6 +394,7 @@ export default {
             pukeInfo: {
                 puke: [],
             },
+            numPuke: [],
             playInfo: {
                 onTurnIndex: 0,
                 restTime: 15,
@@ -391,9 +404,26 @@ export default {
                 pokers: Array,
                 playerIndex: 0,
             },
+            scoreInfo: {
+                players: [],
+                result: '',
+            },
+            action: {
+                back: {
+                    able: false,
+                    puke: [],
+                },
+                break: {
+                    able: false,
+                    puke: []
+                },
+            },
             idMap: new Map,
+            numPokerMap: Array,
             initialize: false,
-            game: game
+            game: game,
+            reconnect: false,
+            connectFailed: false
         }
     },
     methods: {
@@ -419,20 +449,59 @@ export default {
         sendPass() {
             this.$global.ws.send(JSON.stringify({info_type: 'play', data: {action: 'pass', pokers: []}}))
         },
+        sendBreak() {
+            this.$global.ws.send(JSON.stringify({info_type: 'play', data: {action: 'break', pokers: this.action.break.puke}}))
+            this.action.break.able = false
+        }, 
+        sendBack() {
+            this.$global.ws.send(JSON.stringify({info_type: 'play', data: {action: 'back', pokers: this.action.back.puke}}))
+            this.action.back.able = false
+        }, 
         getIndexById(id) {
             return this.idMap.get(id)
         },
-        onListen() {
+        compare(a, b) {
+            return this.numPokerMap[a] - this.numPokerMap[b]
+        },
+        toCreateRoom() {
+            this.$router.replace(window.location.host + '/room/add?reconnect=false')
+        },
+        async onListen() {
             let that = this
+            if(!this.reconnect) {
+                if(this.$route.params.type === 'add') {
+                    let socketUrl = "ws:"+window.location.host+ "/api/room/add"
+                    socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
+                    let websocket = new WebSocket(socketUrl)
+                    this.$global.setWs(websocket)
+                }else if (this.$route.params.type === 'join') {
+                    let socketUrl = "ws:"+window.location.host+ "/api/room/join"
+                    socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
+                    let websocket = new WebSocket(socketUrl)
+                    this.$global.setWs(websocket)
+                    await this.$global.send({room_id: this.roomId})
+                } else {
+                    return
+                }
+            } else {
+                let socketUrl = "ws:"+window.location.host+ "/api/room/reconnect"
+                socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
+                let websocket = new WebSocket(socketUrl)
+                this.$global.setWs(websocket)
+                await this.$global.send({id: localStorage.getItem('id')})
+            }
+            
             this.$global.ws.onmessage = mes => {
                 let data = utils.decode(mes.data)
                 let temp
                 switch(data.info_type) {
                     case 'wait':
-                        console.log('wait')
+                        that.roomInfo.status = 0
                         that.roomInfo.roomId = data.room_id
                         that.roomInfo.roomMaster = data.room_master
                         that.selfInfo.id = data.self_id
+                        window.localStorage.setItem('id', that.selfInfo.id)
+                        window.localStorage.setItem('lastOnline', new Date().getTime()/1000)
                         for(let i=0;i<data.players.length;i++) {
                             if(data.players[i].id === that.selfInfo.id) {
                                 that.selfInfo.index = i
@@ -443,25 +512,18 @@ export default {
                         that.players = data.players
                         break
                     case 'start':
-                        that.pukeInfo.puke = data.puke
+                        that.pukeInfo.puke = data.puke.sort(this.compare)
                         that.roomInfo.status = 1
                         for(let i=0;i<that.players.length;i++) {
                             that.idMap.set(that.players[i].id, i)
                         }
                         break
-                    case 'seen':
-                        that.players = data.players
-                        that.roomInfo.status = 1
-                        that.playInfo.restTime = data.rest_time
-                        that.playInfo.onTurnIndex = that.selfInfo.index
-                        break
                     case 'player':
                         that.roomInfo.status = 2
                         temp = {
-                            onTurnIndex: 0,
+                            onTurnIndex: that.getIndexById(data.on_turn),
                             restTime: 15,
                         }
-                        temp.onTurnIndex = that.getIndexById(data.on_turn)
                         temp.restTime = data.rest_time
                         that.playInfo = temp
                         that.players = data.players
@@ -478,9 +540,44 @@ export default {
                         }
                         temp.playerIndex = that.getIndexById(data.max_player)
                         that.lastPoker = temp
+                        that.action.back.able = false
+                        that.action.break.able = false
+                        if(temp.playerIndex !== this.selfInfo.index) {
+                            if(temp.pokers.length == 1) {
+                                let ablePuke = []
+                                for(let i=0;i<that.numPuke.length;i++) {
+                                    if(that.numPuke[i] === that.numPokerMap[temp.pokers[0]]) {
+                                        ablePuke.push(that.pukeInfo.puke[i])
+                                        if(ablePuke.length >= 2) {
+                                            let tempAction = {
+                                                able: true,
+                                                puke: ablePuke
+                                            }
+                                            that.action.break = tempAction
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            if(temp.action === 'break') {
+                                for(let i=0;i<that.numPuke.length;i++) {
+                                    if(that.numPuke[i] === that.numPokerMap[temp.pokers[0]]) {
+                                        let tempAction = {
+                                            able: true,
+                                            puke: [that.pukeInfo.puke[i]]
+                                        }
+                                        that.action.back = tempAction
+                                        break
+                                    }
+                                }
+                            }
+                        }
                         break
                     case 'poker':
-                        that.pukeInfo.puke = data.puke
+                        that.pukeInfo.puke = data.puke.sort(this.compare)
+                        console.log('sorted')
+                        console.log(that.pukeInfo.puke)
+                        console.log(data.puke)
                         break
                     case 'useless':
                         alert('无效牌')
@@ -492,27 +589,73 @@ export default {
                             playerIndex: 0,
                         },
                         that.lastPoker = temp
+                        break
+                    case 'score':
+                        that.playInfo.onTurnIndex = -1
+                        temp =  {
+                            players: data.players,
+                            result: data.result,
+                        }
+                        that.scoreInfo = temp
+                        break
+                    case 'reconnect':
+                        if(!data.success) {
+                            that.connectFailed = true
+                        }
                 }
             }
         }
     },
     async mounted() {
-        let that = this
         this.roomId = this.$route.query.room_id
         height = document.documentElement.clientHeight
         width = document.documentElement.clientWidth
-        if (!this.$global.ws) {
-            let socketUrl = "ws:"+location.host+ "/api/room/join"
-            socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
-            let websocket = new WebSocket(socketUrl)
-            this.$global.setWs(websocket)
-            await this.$global.send({room_id: this.roomId})
-        }
         vue = this
+
         this.initialize = true
-        setTimeout(()=> {
-            that.updateStatus()
-        }, 1000)
+        let reconnect = this.$route.query.reconnect
+        if(reconnect != undefined && !reconnect) {
+            this.reconnect = false
+        } else {
+            // 三分钟内离线可重连
+            let lastTime = localStorage.getItem('lastOnline')
+            let nowTime = new Date().getTime() / 1000
+            if(lastTime != undefined && nowTime-lastTime < 180) {
+                this.reconnect = true
+            }
+        }
+        
+        
+        // 创建数字到牌点数的map
+        let map = new Array(pokerPage)
+        for (let i = 0; i < map.length; i++) {
+            let temp = 0
+            if (i > 51) {
+                if (i == smallKing) {
+                    temp = 14
+                } else {
+                    temp = 15
+                }
+            } else {
+                temp = Math.floor(i / 4) - 1
+                if (temp <= 0) {
+                    temp += 13
+                }
+            }
+            map[i] = temp
+        }
+        this.numPokerMap = map
+    },
+    watch: {
+        'pukeInfo.puke': {
+            handler(val) {
+                this.numPuke = []
+                let that = this
+                val.forEach(num=> {
+                    that.numPuke.push(this.numPokerMap[num])                    
+                })
+            }
+        }
     }
 }
 </script>

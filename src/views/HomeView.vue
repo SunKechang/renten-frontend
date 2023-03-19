@@ -5,7 +5,7 @@
         <button @click="addRoom">创建房间</button>
       </div>
       <div style="margin-left: 20px;" v-if="userRole != 1">
-        <form action="room">
+        <form action="room/join">
           房间号: <input type="text" name="room_id" />
           <input type="submit" value="加入房间" />
         </form>
@@ -23,20 +23,14 @@ export default {
     }
   },
   methods: {
-    addRoom() {
+    async addRoom() {
       this.isMaster = 1
-      let websocket;
       if (typeof WebSocket === "undefined") {
         alert("您的浏览器不支持WebSocket");
         return;
       } else {
-        let that = this
-        let socketUrl = "ws:"+location.host+ "/api/room/add"
-        socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
-        websocket = new WebSocket(socketUrl)
-        that.$global.setWs(websocket)
         this.$router.push({
-          path: "/room"
+          path: "/room/add"
         });
       }
     },
