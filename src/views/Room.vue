@@ -1,11 +1,9 @@
 <template>
     <div class="home">
-        <div>
-            <ion-phaser 
-                v-bind:game.prop="game"
-                v-bind:initialize.prop="initialize"
-            />
-        </div>
+        <ion-phaser 
+            v-bind:game.prop="game"
+            v-bind:initialize.prop="initialize"
+        />
     </div>
   </template>
   
@@ -33,6 +31,13 @@ let timerPosition = [
     {x: 50, y: 5},      // 1号位置
     {x: 80, y: 45},     // 2号位置
     {x: 30, y: 60},     // 自己
+]
+
+let pokerPosition = [
+    {x: 15, y: 35},     // 0号位置
+    {x: 42, y: 17},      // 1号位置
+    {x: 60, y: 35},     // 2号位置
+    {x: 40, y: 35},     // 自己
 ]
 
 let pokerPage = 54
@@ -85,12 +90,12 @@ function addPoker(that, pokerGroup) {
             child.setData('changed', false)
         })
     })
-    pokerGroup.incXY(percent2Px(20, true), percent2Px(70, false))
+    pokerGroup.incXY(percent2Px(15, true), percent2Px(70, false))
 }
 
-function addButton(content, widthPercent, heightPercent, that) {
-    let button = that.add.sprite(percent2Px(widthPercent, true), percent2Px(heightPercent, false), 'button', 0)
-    let text = that.add.text(0, 0, content, { fontSize: '32px', fill: '#ffffff' })
+function addButton(content, widthPercent, heightPercent, that) { 
+    let button = that.add.sprite(percent2Px(widthPercent, true), percent2Px(heightPercent, false), 'button')
+    let text = that.add.text(0, 0, content, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: '32px', fill: 'black' })
     button.setDisplaySize(text.width + 20, text.height + 20)
     text.setOrigin(0.5)
     text.setX(button.x)
@@ -107,7 +112,7 @@ function addButton(content, widthPercent, heightPercent, that) {
 
 function renderPlayer(players, playerGroup, that) {
     playerGroup.clear(true, true)
-    let index = that.add.text(percent2Px(70, true), percent2Px(10, false), '座位：'+vue.selfInfo.index+'号', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+    let index = that.add.text(percent2Px(80, true), percent2Px(10, false), '座位：'+vue.selfInfo.index+'号', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'white'})
     playerGroup.add(index)
     for(let i=0;i<players.length;i++) {
         if(players[i].id === vue.selfInfo.id) {
@@ -115,6 +120,7 @@ function renderPlayer(players, playerGroup, that) {
         }
         let index = index2Pos(i)
         let player = that.add.image(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y, false), 'player')
+        player.setDisplaySize(percent2Px(7, true), percent2Px(7, true))
         let status = ''
         switch(players[i].status) {
             case 0:
@@ -140,10 +146,10 @@ function renderPlayer(players, playerGroup, that) {
         }
         if(players[i].group !== undefined) {
             if(players[i].group === 1) {
-                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+10, false), '红十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+7, false), '红十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
                 playerGroup.add(playerTeam)
             } else if(players[i].group === 2) {
-                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+10, false), '独十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
+                let playerTeam = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+7, false), '独十组', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'red'})
                 playerGroup.add(playerTeam)
             }
         }
@@ -212,7 +218,9 @@ let game = {
             this.load.atlas('pokers', 'http://8.130.97.117/red_ten/pokers.png', 'http://8.130.97.117/red_ten/pokers.json');
             this.load.image('player', 'http://8.130.97.117/red_ten/player.png')
             this.load.image('timer', 'http://8.130.97.117/red_ten/timer.png')
-            this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
+            this.load.image('car_back', 'http://8.130.97.117/red_ten/car_back.jpg')
+            this.load.image('button', 'http://8.130.97.117/red_ten/button.png')
+            // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
         },
         create: function() {
             let that = this
@@ -224,6 +232,11 @@ let game = {
             let lastPokerGroup = this.add.group()
             let scoreGroup = this.add.group()
             let extraGroup = this.add.group()
+            let backGroup = this.add.group()
+            let back = this.add.image(percent2Px(50, true), percent2Px(50, false), 'car_back')
+            back.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
+            backGroup.add(back)
+            // this.cameras.main.centerOn(percent2Px(50, true), percent2Px(50, false))
             // 清屏
             vue.$watch('roomInfo.status', (value)=> {
                 if(value === 1) {
@@ -247,14 +260,14 @@ let game = {
             })
 
             // 渲染分享链接
-            let url = this.add.text(percent2Px(70, true), percent2Px(5, false), vue.roomInfo.roomId, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
+            let url = this.add.text(percent2Px(80, true), percent2Px(5, false), vue.roomInfo.roomId, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
             vue.$watch('roomInfo.roomId', (value)=>{
                 url.setText(value)
             })
             url.setInteractive()
             url.on('pointerdown', ()=> {
                 let textarea = document.createElement('textarea');
-                textarea.value = url.text;
+                textarea.value = window.location.host + '/room/join?room_id=' + url.text;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
@@ -274,9 +287,9 @@ let game = {
                     return
                 }
                 let pos = index2Pos(value.onTurnIndex)
-                let restTime = this.add.text(percent2Px(timerPosition[pos].x + 4, true), percent2Px(timerPosition[pos].y, false), '', { fontSize: '24px', fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
+                let restTime = this.add.text(percent2Px(timerPosition[pos].x + 2, true), percent2Px(timerPosition[pos].y, false), '', { fontSize: '24px', fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
                 let timer = this.add.image(percent2Px(timerPosition[pos].x, true), percent2Px(timerPosition[pos].y, false), 'timer')
-                timer.setDisplaySize(percent2Px(5, true), percent2Px(5, true))
+                timer.setDisplaySize(percent2Px(4, true), percent2Px(4, true))
                 restTime.setText(vue.playInfo.restTime)
                 restTime.setOrigin(0.5)
                 timerGroup.add(timer)
@@ -331,7 +344,8 @@ let game = {
                     poker.setDisplaySize(percent2Px(7, true), percent2Px(20, false))
                     lastPokerGroup.add(poker)
                 }
-                lastPokerGroup.incXY(percent2Px(40, true), percent2Px(35, false))
+                let pos = index2Pos(value.playerIndex)
+                lastPokerGroup.incXY(percent2Px(pokerPosition[pos].x, true), percent2Px(pokerPosition[pos].y))
             })
             vue.$watch('action', (value)=> {
                 extraGroup.clear(true, true)
@@ -613,17 +627,17 @@ export default {
         vue = this
 
         this.initialize = true
-        let reconnect = this.$route.query.reconnect
-        if(reconnect != undefined && !reconnect) {
-            this.reconnect = false
-        } else {
-            // 三分钟内离线可重连
-            let lastTime = localStorage.getItem('lastOnline')
-            let nowTime = new Date().getTime() / 1000
-            if(lastTime != undefined && nowTime-lastTime < 180) {
-                this.reconnect = true
-            }
-        }
+        // let reconnect = this.$route.query.reconnect
+        // if(reconnect != undefined && !reconnect) {
+        //     this.reconnect = false
+        // } else {
+        //     // 三分钟内离线可重连
+        //     let lastTime = localStorage.getItem('lastOnline')
+        //     let nowTime = new Date().getTime() / 1000
+        //     if(lastTime != undefined && nowTime-lastTime < 180) {
+        //         this.reconnect = true
+        //     }
+        // }
         
         
         // 创建数字到牌点数的map
@@ -659,3 +673,11 @@ export default {
     }
 }
 </script>
+<style scoped>
+    .home {
+        padding: 0;
+        margin: 0;
+        border: 0;
+        background-color: blue;
+    }
+</style>
