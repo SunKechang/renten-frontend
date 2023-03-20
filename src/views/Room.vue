@@ -437,7 +437,8 @@ export default {
             initialize: false,
             game: game,
             reconnect: false,
-            connectFailed: false
+            connectFailed: false,
+            heartBeat: false,
         }
     },
     methods: {
@@ -510,6 +511,7 @@ export default {
                 let temp
                 switch(data.info_type) {
                     case 'wait':
+                        that.roomInfo.status = -1
                         that.roomInfo.status = 0
                         that.roomInfo.roomId = data.room_id
                         that.roomInfo.roomMaster = data.room_master
@@ -669,6 +671,27 @@ export default {
                     that.numPuke.push(this.numPokerMap[num])                    
                 })
             }
+        },
+        'roomInfo.status': {
+            handler(val) {
+                let that = this
+                let interval
+                if(val < 1) {
+                    if(!this.heartBeat) {
+                        interval = setInterval(()=> {
+                            that.$global.ws.send(JSON.stringify({info_type: 'test', data: null}))
+                            console.log('sent')
+                        }, 10000)
+                        this.heartBeat = true
+                    }
+                } else {
+                    if(this.heartBeat) {
+                        clearInterval(interval)
+                        this.heartBeat = false
+                    }
+                }
+            },
+            deep: true
         }
     }
 }
