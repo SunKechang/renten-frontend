@@ -233,6 +233,7 @@ let game = {
             let scoreGroup = this.add.group()
             let extraGroup = this.add.group()
             let backGroup = this.add.group()
+            let scoreTimeGroup = this.add.group()
             let back = this.add.image(percent2Px(50, true), percent2Px(50, false), 'car_back')
             back.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
             backGroup.add(back)
@@ -267,7 +268,7 @@ let game = {
             url.setInteractive()
             url.on('pointerdown', ()=> {
                 let textarea = document.createElement('textarea');
-                textarea.value = window.location.host + '/room/join?room_id=' + url.text;
+                textarea.value = 'http://' + window.location.host + '/room/join?room_id=' + url.text;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
@@ -347,6 +348,11 @@ let game = {
                 let pos = index2Pos(value.playerIndex)
                 lastPokerGroup.incXY(percent2Px(pokerPosition[pos].x, true), percent2Px(pokerPosition[pos].y))
             })
+            vue.$watch('roomInfo.scoreTime', (value)=> {
+                scoreTimeGroup.clear(true, true)
+                let scoreTime = that.add.text(percent2Px(80, true), percent2Px(15, false), value+'倍', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'white'})
+                scoreTimeGroup.add(scoreTime)
+            })
             vue.$watch('action', (value)=> {
                 extraGroup.clear(true, true)
                 if(value.break.able) {
@@ -398,6 +404,7 @@ export default {
                 roomId: 0,
                 roomMaster: 0,
                 status: 0,  //0 等待 1 开始 2 出牌
+                scoreTime: 1,
             },
             selfInfo: {
                 id: 0,
@@ -549,6 +556,7 @@ export default {
                         if (data.max_action.pokers.length === 0) {
                             return
                         }
+                        that.roomInfo.scoreTime = data.score_times
                         temp = {
                             action: data.max_action.action,
                             pokers: data.max_action.pokers,
@@ -607,6 +615,7 @@ export default {
                         that.lastPoker = temp
                         break
                     case 'score':
+                        that.roomInfo.scoreTime = 1
                         that.playInfo.onTurnIndex = -1
                         temp =  {
                             players: data.players,
