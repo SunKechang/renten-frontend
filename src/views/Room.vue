@@ -102,10 +102,10 @@ function addButton(content, widthPercent, heightPercent, that) {
     text.setY(button.y)
     button.setInteractive()
     button.on('pointerdown', ()=>{
-        button.setFrame(1, true, true)
+        // button.setFrame(1, true, true)
     })
     button.on('pointerup', ()=>{
-        button.setFrame(0, true, true)
+        // button.setFrame(0, true, true)
     })
     return {button, text}
 }
@@ -215,11 +215,11 @@ let game = {
     scene: {
         preload: function() {
             this.cameras.main.setBackgroundColor('#24252A')
-            this.load.atlas('pokers', 'http://8.130.97.117/red_ten/pokers.png', 'http://8.130.97.117/red_ten/pokers.json');
-            this.load.image('player', 'http://8.130.97.117/red_ten/player.png')
-            this.load.image('timer', 'http://8.130.97.117/red_ten/timer.png')
-            this.load.image('car_back', 'http://8.130.97.117/red_ten/car_back.jpg')
-            this.load.image('button', 'http://8.130.97.117/red_ten/button.png')
+            this.load.atlas('pokers', 'http://8.130.97.117:88/red_ten/pokers.png', 'http://8.130.97.117:88/red_ten/pokers.json');
+            this.load.image('player', 'http://8.130.97.117:88/red_ten/player.png')
+            this.load.image('timer', 'http://8.130.97.117:88/red_ten/timer.png')
+            this.load.image('car_back', 'http://8.130.97.117:88/red_ten/car_back.jpg')
+            this.load.image('button', 'http://8.130.97.117:88/red_ten/button.png')
             // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
         },
         create: function() {
@@ -681,6 +681,7 @@ export default {
                 })
             }
         },
+        // todo 细究这个心跳机制
         'roomInfo.status': {
             handler(val) {
                 let that = this
