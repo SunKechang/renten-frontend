@@ -8,8 +8,12 @@ export default {
             return
         }
         let that = this
-        this.ws.onopen = () => {
-            if (that.ws.readyState === 1) {   
+        if(this.ws.readyState === 1) {
+            console.log("send", data)
+            this.ws.send(JSON.stringify(data))
+        } else {
+            this.ws.onopen = () => {
+                console.log("waitsend", data)
                 that.ws.send(JSON.stringify(data))
             }
         }

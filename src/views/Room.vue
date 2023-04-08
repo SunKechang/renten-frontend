@@ -5,7 +5,7 @@
             v-bind:initialize.prop="initialize"
         />
     </div>
-  </template>
+</template>
   
 <script>
 import utils from '../../utils/decode'
@@ -138,6 +138,9 @@ function renderPlayer(players, playerGroup, that) {
             case 4:
                 status = '走人'
                 break
+            case 5:
+                status = '离线'
+                break
         }
         let text = that.add.text(percent2Px(playerPosition[index].x, true), percent2Px(playerPosition[index].y+5, false), status, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
         if(players[i].puke !== undefined) {
@@ -234,6 +237,7 @@ let game = {
             let extraGroup = this.add.group()
             let backGroup = this.add.group()
             let scoreTimeGroup = this.add.group()
+            let failGroup = this.add.group()
             let back = this.add.image(percent2Px(50, true), percent2Px(50, false), 'car_back')
             back.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
             backGroup.add(back)
@@ -380,13 +384,17 @@ let game = {
                 renderScore(value, scoreGroup, that)
             })
             vue.$watch('connectFailed', (value)=> {
+                failGroup.clear(true, true)
                 if(value) {
-                    that.add.text(percent2Px(50, true), percent2Px(50, false), '重连失败，您可以点击按钮创建房间', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
+                    let connectText = that.add.text(percent2Px(50, true), percent2Px(50, false), '重连失败，您可以点击按钮创建房间', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
                     let createTemp = addButton('创建房间', 50, 60, that)
                     createTemp.button.setInteractive()
                     createTemp.button.on('pointerdown', ()=> {
                         vue.toCreateRoom()
                     })
+                    failGroup.add(connectText)
+                    failGroup.add(createTemp.button)
+                    failGroup.add(createTemp.text)
                 }
             })
             vue.onListen()
@@ -443,9 +451,11 @@ export default {
             numPokerMap: Array,
             initialize: false,
             game: game,
-            reconnect: false,
-            connectFailed: false,
-            heartBeat: false,
+            reconnecting: false,   // 是否正在重连
+            connectFailed: true,   // 当前连接是否失败
+            beatInterval: null,  // 心跳循环
+            reconnectTime: 0,   // 重连次数
+            connectTimeOut: null,
         }
     },
     methods: {
@@ -486,11 +496,27 @@ export default {
             return this.numPokerMap[a] - this.numPokerMap[b]
         },
         toCreateRoom() {
-            this.$router.replace(window.location.host + '/room/add?reconnect=false')
+            this.$router.replace(window.location.host + '/room/add')
+        },
+        toReconnect() {
+            let that = this
+            this.reconnecting = true
+            this.reconnectTime++
+            if(this.reconnectTime > 3) {
+                this.$message.error('与服务器失去连接')
+                return
+            }
+            this.connectTimeOut && clearTimeout(this.connectTimeOut)
+            this.connectTimeOut = setTimeout(function(){
+                if(!that.connectFailed) {
+                    return
+                }
+                that.onListen()
+            }, 5000)
         },
         async onListen() {
             let that = this
-            if(!this.reconnect) {
+            if(!this.reconnecting) {
                 if(this.$route.params.type === 'add') {
                     let socketUrl = "ws:"+window.location.host+ "/api/room/add"
                     socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
@@ -506,15 +532,40 @@ export default {
                     return
                 }
             } else {
+                let _id = this.selfInfo.id
+                if(_id === 0) {
+                    _id = sessionStorage.getItem('id')
+                }
+                let temp = 0
+                if(typeof _id === "string") {
+                    temp = parseInt(_id)
+                } else if(typeof _id === "number") {
+                    temp = _id
+                } else {
+                    return
+                }
                 let socketUrl = "ws:"+window.location.host+ "/api/room/reconnect"
                 socketUrl = socketUrl.replace("https", "ws").replace("http", "ws")
                 let websocket = new WebSocket(socketUrl)
                 this.$global.setWs(websocket)
-                await this.$global.send({id: localStorage.getItem('id')})
+                await this.$global.send({id: temp})
+            }
+            this.connectFailed = false
+            this.reconnecting = false
+            this.$global.ws.onerror = function() {
+                console.log('服务器连接出错')
+                that.connectFailed = true
+                that.toReconnect() // 重连
+            }
+
+            this.$global.ws.onclose = function() {
+                console.log('服务器连接关闭')
+                that.connectFailed = true
             }
             
             this.$global.ws.onmessage = mes => {
                 let data = utils.decode(mes.data)
+                that.reconnectTime = 0  //连接成功，重置重连次数
                 let temp
                 switch(data.info_type) {
                     case 'wait':
@@ -523,8 +574,7 @@ export default {
                         that.roomInfo.roomId = data.room_id
                         that.roomInfo.roomMaster = data.room_master
                         that.selfInfo.id = data.self_id
-                        window.localStorage.setItem('id', that.selfInfo.id)
-                        window.localStorage.setItem('lastOnline', new Date().getTime()/1000)
+                        window.sessionStorage.setItem('id', that.selfInfo.id)
                         for(let i=0;i<data.players.length;i++) {
                             if(data.players[i].id === that.selfInfo.id) {
                                 that.selfInfo.index = i
@@ -638,19 +688,14 @@ export default {
         vue = this
 
         this.initialize = true
-        // let reconnect = this.$route.query.reconnect
-        // if(reconnect != undefined && !reconnect) {
-        //     this.reconnect = false
-        // } else {
-        //     // 三分钟内离线可重连
-        //     let lastTime = localStorage.getItem('lastOnline')
-        //     let nowTime = new Date().getTime() / 1000
-        //     if(lastTime != undefined && nowTime-lastTime < 180) {
-        //         this.reconnect = true
-        //     }
-        // }
-        
-        
+        this.beatInterval && clearInterval(this.beatInterval)
+
+        let sessionId = sessionStorage.getItem('id')
+        if(sessionId != null && sessionId > 0) {
+            this.reconnecting = true
+        } else {
+            this.reconnecting = false
+        }
         // 创建数字到牌点数的map
         let map = new Array(pokerPage)
         for (let i = 0; i < map.length; i++) {
@@ -671,6 +716,11 @@ export default {
         }
         this.numPokerMap = map
     },
+    beforeDestroy() {
+        this.$global.ws.close()
+        this.$global.setWs(null)
+        this.beatInterval && clearInterval(this.beatInterval)
+    },
     watch: {
         'pukeInfo.puke': {
             handler(val) {
@@ -682,26 +732,18 @@ export default {
             }
         },
         // todo 细究这个心跳机制
-        'roomInfo.status': {
+        'connectFailed': {
             handler(val) {
-                let that = this
-                let interval
-                if(val < 1) {
-                    if(!this.heartBeat) {
-                        interval = setInterval(()=> {
-                            that.$global.ws.send(JSON.stringify({info_type: 'test', data: null}))
-                            console.log('sent')
-                        }, 10000)
-                        this.heartBeat = true
-                    }
-                } else {
-                    if(this.heartBeat) {
-                        clearInterval(interval)
-                        this.heartBeat = false
-                    }
+                this.beatInterval && clearInterval(this.beatInterval)
+                if(val) {
+                    // 与服务器失去连接，停止发送心跳
+                    return
                 }
-            },
-            deep: true
+                let that = this
+                this.beatInterval = setInterval(()=> {
+                    that.$global.send({info_type: 'test', data: null})
+                }, 10000)
+            }
         }
     }
 }
