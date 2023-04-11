@@ -1,3 +1,5 @@
+let productionGzipExtensions = /\.(js|css|json|txt|html|ico|svg)(\?.*)?$/i;
+
 module.exports = {
   transpileDependencies: true,
   devServer: {
@@ -13,6 +15,30 @@ module.exports = {
         }
       },
     }
-  }
+  },
+  chainWebpack: config => {
+    if (process.env.NODE_ENV === 'production') {
+      config.plugin("CompressionPlugin").use('compression-webpack-plugin', [{
+        filename: '[path][base].gz',
+        algorithm: 'gzip',
+        // 要压缩的文件（正则）
+        test: productionGzipExtensions,
+        // 最小文件开启压缩
+        threshold: 10240,
+        minRatio: 0.8
+      }])
+      config.module
+      .rule('image')
+      .test(/\.(png|jpe?g|gif)(\?.*)?$/)
+      .use('image-webpack-loader')
+      .loader('image-webpack-loader')
+      .options({
+          mozjpeg: { progressive: true, quality: 50 }, // 压缩JPEG图像
+          // 此处为ture的时候不会启用压缩处理,目的是为了开发模式下调试速度更快
+          disable: false
+      })
+      .end()
+    }
+  },
   
 }
