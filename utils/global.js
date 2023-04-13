@@ -11,7 +11,7 @@ export default {
         if(this.ws.readyState === 1) {
             console.log("send", data)
             this.ws.send(JSON.stringify(data))
-        } else {
+        } else if(this.ws.readyState === 0) {   // 当连接处于出错状态时拒绝发送
             this.ws.onopen = () => {
                 console.log("waitsend", data)
                 that.ws.send(JSON.stringify(data))

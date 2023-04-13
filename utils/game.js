@@ -219,7 +219,15 @@ function renderBack(backGroup, that) {
     let back = that.add.image(percent2Px(50, true), percent2Px(50, false), 'car_back')
     back.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
     back.setPosition(width/2, height/2)
+
+    // 添加返回至首页按钮
+    let temp = addButton('首页', 70, 10, that)
+    temp.button.on('pointerdown', ()=> {
+        vue.toCreateRoom()
+    })
     backGroup.add(back)
+    backGroup.add(temp.button)
+    backGroup.add(temp.text)
 }
 
 function renderShare(value, shareGroup, that) {
@@ -365,115 +373,119 @@ function renderFail(value, failGroup, buttonGroup, that) {
 // }
 
 
-let game = {
-    width: "100%",
-    height: "100%",
-    type: Phaser.AUTO,
-    scene: {
-        preload: function() {
-            this.cameras.main.setBackgroundColor('#24252A')
-            if(process.env.NODE_ENV === 'development') {
-                this.load.atlas('pokers', 'http://8.130.97.117:88/pokers.png', 'http://8.130.97.117:88/pokers.json');
-                this.load.image('player', 'http://8.130.97.117:88/player.png')
-                this.load.image('timer', 'http://8.130.97.117:88/timer.png')
-                this.load.image('car_back', 'http://8.130.97.117:88/car_back.jpg')
-                this.load.image('button', 'http://8.130.97.117:88/button.png')
-            } else {
-                this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
-                this.load.image('player', '/resource/player.png')
-                this.load.image('timer', '/resource/timer.png')
-                this.load.image('car_back', '/resource/car_back.jpg')
-                this.load.image('button', '/resource/button.png')
-            }
-            
-            // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
-        },
-        create: function() {
-            let that = this
-            this.scale.resize(width, height)
-            pokerGroup = this.add.group()
-            playerGroup = this.add.group()
-            buttonGroup = this.add.group()
-            timerGroup = this.add.group()
-            pokerButtonGroup = this.add.group()
-            lastPokerGroup = this.add.group()
-            scoreGroup = this.add.group()
-            extraGroup = this.add.group()
-            backGroup = this.add.group()
-            scoreTimeGroup = this.add.group()
-            failGroup = this.add.group()
-            shareGroup = this.add.group()
-            // 渲染背景
-            renderBack(backGroup, this)
-            console.log("loaded back")
-
-            vue.$watch('roomInfo.status', (value)=> {
-                if(value === 1) {
-                    //游戏开始，清屏
-                    pokerGroup.clear(true, true)
-                    timerGroup.clear(true, true)
-                    pokerButtonGroup.clear(true, true)
-                    lastPokerGroup.clear(true, true)
-                    scoreGroup.clear(true, true)
-                    extraGroup.clear(true, true)
+// 封装初始化游戏为函数
+function initGame() {
+    let game = {
+        width: "100%",
+        height: "100%",
+        type: Phaser.AUTO,
+        scene: {
+            preload: function() {
+                this.cameras.main.setBackgroundColor('#24252A')
+                if(process.env.NODE_ENV === 'development') {
+                    this.load.atlas('pokers', 'http://8.130.97.117:88/pokers.png', 'http://8.130.97.117:88/pokers.json');
+                    this.load.image('player', 'http://8.130.97.117:88/player.png')
+                    this.load.image('timer', 'http://8.130.97.117:88/timer.png')
+                    this.load.image('car_back', 'http://8.130.97.117:88/car_back.jpg')
+                    this.load.image('button', 'http://8.130.97.117:88/button.png')
+                } else {
+                    this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
+                    this.load.image('player', '/resource/player.png')
+                    this.load.image('timer', '/resource/timer.png')
+                    this.load.image('car_back', '/resource/car_back.jpg')
+                    this.load.image('button', '/resource/button.png')
                 }
-            })
-            // 渲染玩家状态
-            vue.$watch('players', (value)=> {
-                renderPlayer(value, playerGroup, that)
-            })
-
-            // 渲染扑克
-            vue.$watch('pukeInfo.puke', ()=> {
-                addPoker(that, pokerGroup)
-            })
-
-            // 渲染分享链接
-            vue.$watch('roomInfo.roomId', (value)=>{
-                renderShare(value, shareGroup, that)
-            })
-            
-
-            // 渲染游戏按钮
-            vue.$watch('players', ()=>{
-                renderPlayButton(buttonGroup, pokerButtonGroup, that)
-            })
-            
-            // 渲染计时器
-            vue.$watch('playInfo', ()=> {
-                let value = vue.playInfo
-                renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that)
-            }, {
-                deep: true
-            })
-
-            // 渲染上一张牌
-            vue.$watch('lastPoker', (value)=> {
-                renderLastPoker(value, lastPokerGroup, that)
-            })
-
-            // 渲染倍数
-            vue.$watch('roomInfo.scoreTime', (value)=> {
-                renderScoreTime(value, scoreTimeGroup, that)
-            })
-
-            // 渲染额外操作按钮
-            vue.$watch('action', (value)=> {
-                renderExtraButton(value, extraGroup, that)
-            },{
-                deep: true
-            })
-            vue.$watch('scoreInfo', (value)=> {
-                renderScore(value, scoreGroup, that)
-            })
-            vue.$watch('connectFailed', (value)=> {
-                renderFail(value, failGroup, buttonGroup, that)
-            })
-            vue.onListen()
-        },
-        update: function() {
-        },
+                
+                // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
+            },
+            create: function() {
+                let that = this
+                this.scale.resize(width, height)
+                pokerGroup = this.add.group()
+                playerGroup = this.add.group()
+                buttonGroup = this.add.group()
+                timerGroup = this.add.group()
+                pokerButtonGroup = this.add.group()
+                lastPokerGroup = this.add.group()
+                scoreGroup = this.add.group()
+                extraGroup = this.add.group()
+                backGroup = this.add.group()
+                scoreTimeGroup = this.add.group()
+                failGroup = this.add.group()
+                shareGroup = this.add.group()
+                // 渲染背景
+                renderBack(backGroup, this)
+                console.log("loaded back")
+    
+                vue.$watch('roomInfo.status', (value)=> {
+                    if(value === 1) {
+                        //游戏开始，清屏
+                        pokerGroup.clear(true, true)
+                        timerGroup.clear(true, true)
+                        pokerButtonGroup.clear(true, true)
+                        lastPokerGroup.clear(true, true)
+                        scoreGroup.clear(true, true)
+                        extraGroup.clear(true, true)
+                    }
+                })
+                // 渲染玩家状态
+                vue.$watch('players', (value)=> {
+                    renderPlayer(value, playerGroup, that)
+                })
+    
+                // 渲染扑克
+                vue.$watch('pukeInfo.puke', ()=> {
+                    addPoker(that, pokerGroup)
+                })
+    
+                // 渲染分享链接
+                vue.$watch('roomInfo.roomId', (value)=>{
+                    renderShare(value, shareGroup, that)
+                })
+                
+    
+                // 渲染游戏按钮
+                vue.$watch('players', ()=>{
+                    renderPlayButton(buttonGroup, pokerButtonGroup, that)
+                })
+                
+                // 渲染计时器
+                vue.$watch('playInfo', ()=> {
+                    let value = vue.playInfo
+                    renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that)
+                }, {
+                    deep: true
+                })
+    
+                // 渲染上一张牌
+                vue.$watch('lastPoker', (value)=> {
+                    renderLastPoker(value, lastPokerGroup, that)
+                })
+    
+                // 渲染倍数
+                vue.$watch('roomInfo.scoreTime', (value)=> {
+                    renderScoreTime(value, scoreTimeGroup, that)
+                })
+    
+                // 渲染额外操作按钮
+                vue.$watch('action', (value)=> {
+                    renderExtraButton(value, extraGroup, that)
+                },{
+                    deep: true
+                })
+                vue.$watch('scoreInfo', (value)=> {
+                    renderScore(value, scoreGroup, that)
+                })
+                vue.$watch('connectFailed', (value)=> {
+                    renderFail(value, failGroup, buttonGroup, that)
+                })
+                vue.onListen()
+            },
+            update: function() {
+            },
+        }
     }
+    return game
 }
 
 export default {
@@ -486,5 +498,5 @@ export default {
         height = _height
         // reRender()
     },
-    game
+    initGame
 }

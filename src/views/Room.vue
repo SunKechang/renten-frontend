@@ -59,7 +59,7 @@ export default {
             idMap: new Map,
             numPokerMap: Array,
             initialize: false,
-            game: phaser.game,
+            game: phaser.initGame(),    // 初始化游戏时每次获取新的变量
             reconnecting: false,   // 是否正在重连
             connectFailed: true,   // 当前连接是否失败
             beatInterval: null,  // 心跳循环
@@ -104,7 +104,6 @@ export default {
             return this.numPokerMap[a] - this.numPokerMap[b]
         },
         toCreateRoom() {
-            sessionStorage.clear()
             this.$router.push({
                 path: "/"
             });
@@ -304,6 +303,12 @@ export default {
                 min = document.documentElement.clientWidth
             }
             phaser.setWindow(max, min)
+        },
+
+        // 封装心跳机制函数
+        beat() {
+            localStorage.setItem('last-login', new Date().getTime())
+            this.$global.send({info_type: 'test', data: null})
         }
     },
     mounted() {
@@ -312,18 +317,19 @@ export default {
         this.roomId = this.$route.query.room_id
         this.initialize = true
         this.beatInterval && clearInterval(this.beatInterval)
-        // window.addEventListener(
-        //     "onorientationchange" in window ? "orientationchange" : "resize",
-        //     this.setWindowInfo,
-        //     false
-        // )
         let sessionId = sessionStorage.getItem('id')
         if(sessionId != null && sessionId > 0) {
             this.reconnecting = true
         } else {
             this.reconnecting = false
         }
-        console.log(this.reconnecting)
+
+        // 当用户长时间不使用该应用，但在此进入依然是/room/add时，可自动跳转至首页
+        let lastLogin = localStorage.getItem('last-login')
+        let nowDate = new Date().getTime()
+        if(nowDate-lastLogin > 15000) {
+            this.toCreateRoom()
+        }
         // 创建数字到牌点数的map
         let map = new Array(pokerPage)
         for (let i = 0; i < map.length; i++) {
@@ -345,11 +351,14 @@ export default {
         this.numPokerMap = map
     },
     beforeDestroy() {
-        this.initialize = false
-        this.$global.ws.close()
+        // 用户手动退出，关闭websocket连接
+        if(this.$global.ws) {
+            this.$global.ws.close(1000, "正常关闭")
+        }
         this.$global.setWs(null)
+        // 设置game为null，再次加载时获取新的game变量，解决BUG[再次进入/room界面空白]
+        this.game = null
         this.beatInterval && clearInterval(this.beatInterval)
-        // window.removeEventListener("onorientationchange", this.setWindowInfo, false)
     },
     watch: {
         'pukeInfo.puke': {
@@ -365,13 +374,13 @@ export default {
         'connectFailed': {
             handler(val) {
                 this.beatInterval && clearInterval(this.beatInterval)
-                if(val) {
-                    // 与服务器失去连接，停止发送心跳
+                if(val || this.reconnecting) {
+                    // 与服务器失去连接|正在重连，停止发送心跳
                     return
                 }
                 let that = this
                 this.beatInterval = setInterval(()=> {
-                    that.$global.send({info_type: 'test', data: null})
+                    that.beat()
                 }, 10000)
             }
         }

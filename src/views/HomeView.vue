@@ -1,13 +1,13 @@
 <template>
   <div class="home" style="display: flex; justify-content: center;">
     <div style="display: flex; flex-direction: column;">
-      <div v-if="userRole != 0">
+      <div>
         <button class="tdButton" @click="addRoom">创建房间</button>
       </div>
-      <div v-if="userRole != 1">
+      <div>
         <form action="room/join">
           <input type="text" name="room_id" placeholder="房间号" class="input"/>
-          <button class="tdButton" type="submit" style="display: inline-block; margin-left: 20px;">加入房间</button>
+          <button class="tdButton" type="submit" style="display: inline-block; margin-left: 20px;" @click="joinRoom">加入房间</button>
         </form>
       </div>
     </div>
@@ -19,12 +19,10 @@ export default {
   name: 'HomeView',
   data() {
     return {
-      userRole: -1, //-1 游客 0 被邀请者 1 房主
     }
   },
   methods: {
     async addRoom() {
-      this.isMaster = 1
       if (typeof WebSocket === "undefined") {
         alert("您的浏览器不支持WebSocket");
         return;
@@ -34,6 +32,13 @@ export default {
         });
       }
     },
+    joinRoom() {
+      localStorage.setItem('last-login', new Date().getTime())
+    }
+  },
+  mounted() {
+    // 每次进入当前页面清空session解决BUG[无法总是使用同一个sessionId导致无法创建新房间]
+    sessionStorage.clear()
   }
 }
 </script>
