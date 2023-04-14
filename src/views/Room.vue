@@ -16,18 +16,18 @@ export default {
     name: 'RoomView',
     data() {
         return {
-            players: Object,
+            players: Array,
             roomInfo: {
                 roomId: 0,
                 roomMaster: 0,
-                status: 0,  //0 等待 1 开始 2 出牌
+                status: 0,  //0 等待 1 开始 2 出牌 3 交贡
                 scoreTime: 1,
             },
             selfInfo: {
                 id: 0,
                 userRole: -1, //-1 游客 0 被邀请者 1 房主
                 index: 0,
-                status: 0, // 当前玩家状态
+                status: 0, // 当前玩家状态 0 未就绪 1 就绪 2 游戏中 3 明牌 4 走人 5 离线
             },
             pukeInfo: {
                 puke: [],
@@ -64,6 +64,11 @@ export default {
             connectFailed: true,   // 当前连接是否失败
             beatInterval: null,  // 心跳循环
             reconnectTime: 0,   // 重连次数
+            tribute: {
+                status: -1,
+                lord: false,
+            },  // 该玩家的收、交贡情况
+            tributeRes: null,   // 交贡结果
         }
     },
     methods: {
@@ -98,7 +103,12 @@ export default {
             this.action.back.able = false
         }, 
         getIndexById(id) {
-            return this.idMap.get(id)
+            let res = this.idMap.get(id)
+            if(!res) {
+                // 不存在就返回0
+                res = 0
+            }
+            return res
         },
         compare(a, b) {
             return this.numPokerMap[a] - this.numPokerMap[b]
@@ -120,6 +130,54 @@ export default {
                 return
             }
             that.onListen()
+        },
+        // 检查额外操作：勾，叉是否成立
+        checkExtra(temp) {
+            this.action.back.able = false
+            this.action.break.able = false
+            if(temp.playerIndex !== this.selfInfo.index) {
+                if(temp.pokers.length == 1) {
+                    let ablePuke = []
+                    for(let i=0;i<this.numPuke.length;i++) {
+                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[0]]) {
+                            ablePuke.push(this.pukeInfo.puke[i])
+                            if(ablePuke.length >= 2) {
+                                let tempAction = {
+                                    able: true,
+                                    puke: ablePuke
+                                }
+                                this.action.break = tempAction
+                                break
+                            }
+                        }
+                    }
+                }
+                if(temp.action === 'break') {
+                    for(let i=0;i<this.numPuke.length;i++) {
+                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[0]]) {
+                            let tempAction = {
+                                able: true,
+                                puke: [this.pukeInfo.puke[i]]
+                            }
+                            this.action.back = tempAction
+                            break
+                        }
+                    }
+                }
+            }
+        },
+        drawOne(poker) {
+            this.pukeInfo.puke = this.pukeInfo.puke.filter(item=> item !== poker)
+        },
+        addOne(poker) {
+            let index = 0
+            for(let i=0;i<this.pukeInfo.puke.length;i++) {
+                if(this.pukeInfo.puke[i] >= poker) {
+                    index = i
+                    break
+                }
+            }
+            this.pukeInfo.puke.splice(index, 0, poker)
         },
         async onListen() {
             let that = this
@@ -230,44 +288,9 @@ export default {
                         }
                         temp.playerIndex = that.getIndexById(data.max_player)
                         that.lastPoker = temp
-                        that.action.back.able = false
-                        that.action.break.able = false
-                        if(temp.playerIndex !== this.selfInfo.index) {
-                            if(temp.pokers.length == 1) {
-                                let ablePuke = []
-                                for(let i=0;i<that.numPuke.length;i++) {
-                                    if(that.numPuke[i] === that.numPokerMap[temp.pokers[0]]) {
-                                        ablePuke.push(that.pukeInfo.puke[i])
-                                        if(ablePuke.length >= 2) {
-                                            let tempAction = {
-                                                able: true,
-                                                puke: ablePuke
-                                            }
-                                            that.action.break = tempAction
-                                            break
-                                        }
-                                    }
-                                }
-                            }
-                            if(temp.action === 'break') {
-                                for(let i=0;i<that.numPuke.length;i++) {
-                                    if(that.numPuke[i] === that.numPokerMap[temp.pokers[0]]) {
-                                        let tempAction = {
-                                            able: true,
-                                            puke: [that.pukeInfo.puke[i]]
-                                        }
-                                        that.action.back = tempAction
-                                        break
-                                    }
-                                }
-                            }
-                        }
                         break
                     case 'poker':
                         that.pukeInfo.puke = data.puke.sort(this.compare)
-                        console.log('sorted')
-                        console.log(that.pukeInfo.puke)
-                        console.log(data.puke)
                         break
                     case 'useless':
                         alert('无效牌')
@@ -292,7 +315,49 @@ export default {
                     case 'reconnect':
                         if(!data.success) {
                             that.connectFailed = true
+                        } else {
+                            that.pukeInfo.puke = data.poker.sort(this.compare)
+                            if(data.last_poker.poker && data.last_poker.poker.length !== 0) {
+                                temp = data.last_poker
+                                temp.playerIndex = that.getIndexById(data.player_id)
+                                that.lastPoker = temp
+                            }
+                            that.players = data.room_info.players
+                            that.roomInfo.roomId = data.room_info.room_id
+                            that.selfInfo.id = data.room_info.self_id
+                            for(let i=0;i<that.players.length;i++) {
+                                that.idMap.set(that.players[i].id, i)
+                            }
+                            that.tribute.lord = data.tribute_lord
                         }
+                        break
+                    case 'tributeStart':
+                        that.roomInfo.status = 3
+                        that.tribute.lord = data.tribute_lord
+                        that.tribute.status = 0
+                        break
+                    case 'tributeProc':
+                        that.roomInfo.status = 3
+                        // 补丁程序，服务端会定期发送当前收、交贡情况
+                        if(that.tribute.status !== data.tribute_proc) {
+                            that.tribute.status = data.tribute_proc
+                        }
+                        break
+                    case 'tribute':
+                        if(data.from === that.selfInfo.id) {
+                            that.drawOne(data.poker)
+                            that.tribute.status = 2
+                            console.log(data.from, that.selfInfo.id)
+                        } else if (data.to === that.selfInfo.id) {
+                            that.addOne(data.poker)
+                        }
+                        temp = data
+                        temp.fromIndex = that.getIndexById(temp.from)
+                        temp.toIndex = that.getIndexById(temp.to)
+                        that.tributeRes = temp
+                        console.log(that.tributeRes)
+                        break
+                        
                 }
             }
         },
@@ -309,6 +374,13 @@ export default {
         beat() {
             localStorage.setItem('last-login', new Date().getTime())
             this.$global.send({info_type: 'test', data: null})
+        },
+        // 发起收贡请求
+        oneTributeChosen() {
+            this.$global.send({info_type: 'getTribute', data: null})
+        },
+        oneTributeBack(poker) {
+            this.$global.send({info_type: 'backTribute', data: poker})
         }
     },
     mounted() {
@@ -320,6 +392,7 @@ export default {
         let sessionId = sessionStorage.getItem('id')
         if(sessionId != null && sessionId > 0) {
             this.reconnecting = true
+            this.selfInfo.id = sessionId
         } else {
             this.reconnecting = false
         }
@@ -368,6 +441,7 @@ export default {
                 val.forEach(num=> {
                     that.numPuke.push(this.numPokerMap[num])                    
                 })
+                this.checkExtra(this.lastPoker)
             }
         },
         // todo 细究这个心跳机制
@@ -382,6 +456,11 @@ export default {
                 this.beatInterval = setInterval(()=> {
                     that.beat()
                 }, 10000)
+            }
+        },
+        'lastPoker': {
+            handler(val) {
+                this.checkExtra(val)
             }
         }
     }

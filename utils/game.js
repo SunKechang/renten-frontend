@@ -29,6 +29,8 @@ let pokerPosition = [
     {x: 40, y: 35},     // 自己
 ]
 
+let backPoker = 54  // 背面牌
+
 let pokerGroup
 let playerGroup
 let buttonGroup
@@ -41,6 +43,7 @@ let backGroup
 let scoreTimeGroup
 let failGroup
 let shareGroup
+let tributeGroup
 
 function index2Pos(index) {
     if(index === vue.selfInfo.index) {
@@ -69,10 +72,18 @@ function addPoker(that, pokerGroup) {
         poker.setData('position', {x: x, y: 70})
         poker.setData('size', {w: 10, h: 25})
         poker.on("pointerdown", () => {
+            if(vue.roomInfo.status === 3) {
+                pokerGroup.getChildren().forEach(child=> {
+                    child.setData('chosen', false)
+                })
+            }
             poker.setData('changed', true)
             poker.setData('chosen', !poker.getData('chosen'))
         })
         poker.on("pointermove", (pointer) => {
+            if(vue.roomInfo.status !== 2) {
+                return
+            }
             if(pointer.isDown && !poker.getData('changed')) {
                 poker.setData('changed', true)
                 poker.setData('chosen', !poker.getData('chosen'))
@@ -301,6 +312,8 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
 
 function renderLastPoker(value, lastPokerGroup, that) {
     lastPokerGroup.clear(true, true)
+    console.log("rendering")
+    console.log(value)
     for(let i=0;i<value.pokers.length;i++) {
         let poker = that.add.image(i*percent2Px(3, true), percent2Px(1, false), 'pokers', value.pokers[i])
         poker.setDisplaySize(percent2Px(7, true), percent2Px(20, false))
@@ -353,6 +366,83 @@ function renderFail(value, failGroup, buttonGroup, that) {
     }
 }
 
+function renderTributePoker(tributeGroup, that) {
+    tributeGroup.clear(true, true)
+    let y = 30
+    console.log("rendering")
+    for(let i=0;i<13;i++) {
+        let x = i*5 + 15
+        let poker = that.add.image(percent2Px(x, true), percent2Px(y, false), 'pokers', backPoker)
+        poker.setDisplaySize(percent2Px(10, true), percent2Px(25, false))
+        poker.setInteractive()
+        poker.setData('chosen', false)
+        poker.setData('type', 'backPoker')
+        poker.setData('position', {x: x, y: y})
+        poker.setData('size', {w: 10, h: 25})
+        poker.on("pointerup", () => {
+            let status = poker.getData('chosen')
+            tributeGroup.getChildren().forEach(child=> {
+                if(child.getData('type') === 'backPoker') {
+                    child.setData('chosen', false)
+                }
+            })
+            if(status) {
+                vue.oneTributeChosen()
+                tributeGroup.clear(true, true)
+            } else {
+                poker.setData('chosen', true)
+            }
+        })
+        poker.on('changedata-chosen', (gameObject, value)=> {
+            let step = 0
+            if(value) {
+                step -= 5
+            }
+            that.tweens.add({ targets: gameObject, y: percent2Px(y + step, false), duration: 150 });
+        })
+        tributeGroup.add(poker)
+    }
+}
+
+function renderTributeButton(tributeGroup, pokerGroup, that) {
+    tributeGroup.clear(true, true)
+    let temp = addButton('回贡', 50, 60, that)
+    temp.button.on('pointerdown', ()=> {
+        let chosen = []
+        pokerGroup.getChildren().forEach(child=> {
+            if(child.getData('chosen')) {
+                chosen.push(child.getData('value'))
+            }
+        })
+        if(chosen.length === 0) {
+            return
+        }
+        vue.oneTributeBack(chosen[0])
+    })
+    tributeGroup.add(temp.button)
+    tributeGroup.add(temp.text)
+}
+
+function renderTributeAni(value, that) {
+    let index = index2Pos(value.fromIndex)
+    let poker = that.add.image(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false), 'pokers', value.poker)
+    poker.setDisplaySize(percent2Px(7, true), percent2Px(17, false))
+    index = index2Pos(value.toIndex)
+    that.tweens.add({ 
+        targets: poker, 
+        x: percent2Px(timerPosition[index].x, true), 
+        y: percent2Px(timerPosition[index].y, false), 
+        duration: 150,
+        onComplete: function () {
+            // 延迟3秒后，让物体消失
+            that.time.delayedCall(3000, function () {
+                poker.setVisible(false);
+            }, [], that);
+        },
+        callbackScope: that
+    })
+}
+
 // 重新渲染整个页面
 // function reRender() {
 //     if(backGroup && backGroup.children) {
@@ -371,6 +461,7 @@ function renderFail(value, failGroup, buttonGroup, that) {
 //         })
 //     }
 // }
+
 
 
 // 封装初始化游戏为函数
@@ -413,6 +504,7 @@ function initGame() {
                 scoreTimeGroup = this.add.group()
                 failGroup = this.add.group()
                 shareGroup = this.add.group()
+                tributeGroup = this.add.group()
                 // 渲染背景
                 renderBack(backGroup, this)
                 console.log("loaded back")
@@ -446,6 +538,7 @@ function initGame() {
     
                 // 渲染游戏按钮
                 vue.$watch('players', ()=>{
+                    failGroup.clear(true, true)
                     renderPlayButton(buttonGroup, pokerButtonGroup, that)
                 })
                 
@@ -479,6 +572,29 @@ function initGame() {
                 vue.$watch('connectFailed', (value)=> {
                     renderFail(value, failGroup, buttonGroup, that)
                 })
+                // 渲染收、交贡
+                vue.$watch('tribute.status', (value)=> {
+                    console.log(value)
+                    if(!vue.tribute.lord) {
+                        return
+                    }
+                    switch(value) {
+                        case 0:
+                            renderTributePoker(tributeGroup, that)
+                            break
+                        case 1:
+                            renderTributeButton(tributeGroup, pokerGroup, that)
+                            break
+                        case 2:
+                            tributeGroup.clear(true, true)
+                            break
+                    }
+                })
+
+                // 渲染收、交贡结果
+                vue.$watch('tributeRes', (value)=> {
+                    renderTributeAni(value, that)
+                })
                 vue.onListen()
             },
             update: function() {
@@ -493,7 +609,6 @@ export default {
         vue = _vue
     },
     setWindow: function(_width, _height) {
-        console.log(_width, _height)
         width = _width
         height = _height
         // reRender()
