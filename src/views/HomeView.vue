@@ -33,7 +33,7 @@ export default {
       }
     },
     joinRoom() {
-      localStorage.setItem('last-login', new Date().getTime())
+      localStorage.setItem('last-pong', new Date().getTime())
     }
   },
   mounted() {

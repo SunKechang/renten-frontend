@@ -262,6 +262,7 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
     if(value.onTurnIndex === -1) {
         return
     }
+    let time1 = new Date().getTime()
     let pos = index2Pos(value.onTurnIndex)
     let restTime = that.add.text(percent2Px(timerPosition[pos].x + 2, true), percent2Px(timerPosition[pos].y, false), '', { fontSize: '24px', fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
     let timer = that.add.image(percent2Px(timerPosition[pos].x, true), percent2Px(timerPosition[pos].y, false), 'timer')
@@ -294,6 +295,8 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
         })
         vue.sendPoker(chosenPokers)
     })
+    let time2 = new Date().getTime()
+    console.log(time2-time1)
     if(vue.lastPoker.action !== 'nextTurn') {
         let passTemp = addButton('过', 55, 60, that)
         passTemp.button.setInteractive()
@@ -462,6 +465,11 @@ function renderTributeAni(value, that) {
 //     }
 // }
 
+function changeGroupVisible(group, visible) {
+    group.getChildren().forEach(child=> {
+        child.visible = visible
+    })
+}
 
 
 // 封装初始化游戏为函数
@@ -505,6 +513,7 @@ function initGame() {
                 failGroup = this.add.group()
                 shareGroup = this.add.group()
                 tributeGroup = this.add.group()
+                let reconnectGroup = this.add.group()
                 // 渲染背景
                 renderBack(backGroup, this)
                 console.log("loaded back")
@@ -567,6 +576,8 @@ function initGame() {
                     deep: true
                 })
                 vue.$watch('scoreInfo', (value)=> {
+                    changeGroupVisible(buttonGroup, false)
+                    changeGroupVisible(extraGroup, false)
                     renderScore(value, scoreGroup, that)
                 })
                 vue.$watch('connectFailed', (value)=> {
@@ -574,7 +585,6 @@ function initGame() {
                 })
                 // 渲染收、交贡
                 vue.$watch('tribute.status', (value)=> {
-                    console.log(value)
                     if(!vue.tribute.lord) {
                         return
                     }
@@ -594,6 +604,18 @@ function initGame() {
                 // 渲染收、交贡结果
                 vue.$watch('tributeRes', (value)=> {
                     renderTributeAni(value, that)
+                })
+                // 渲染系统连接中
+                let connectText = that.add.text(percent2Px(35, true), percent2Px(40, false), '连接中，请稍候', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
+                reconnectGroup.add(connectText)
+                reconnectGroup.getChildren().forEach(child => {
+                    child.visible = false
+                })
+                vue.$watch('reconnecting', (value)=> {
+                    console.log('watch reconnecting', value)
+                    reconnectGroup.getChildren().forEach(child => {
+                        child.visible = value
+                    })
                 })
                 vue.onListen()
             },

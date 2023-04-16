@@ -8,13 +8,19 @@ export default {
             return
         }
         let that = this
+        let temp
+        if(data !== 'ping') {
+            temp = JSON.stringify(data)
+        } else {
+            temp = 'ping'
+        }
         if(this.ws.readyState === 1) {
-            console.log("send", data)
-            this.ws.send(JSON.stringify(data))
+            console.log("send", temp)
+            this.ws.send(temp)
         } else if(this.ws.readyState === 0) {   // 当连接处于出错状态时拒绝发送
             this.ws.onopen = () => {
                 console.log("waitsend", data)
-                that.ws.send(JSON.stringify(data))
+                that.ws.send(temp)
             }
         }
     },

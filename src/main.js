@@ -14,7 +14,7 @@ defineIonPhaser(window);
 
 router.beforeEach((to, from, next) => {
   if(from.name &&(to.path === '/room/add' || to.path === '/room/join')) {
-    localStorage.setItem('last-login', new Date().getTime())
+    localStorage.setItem('last-pong', new Date().getTime())
   }
   // 允许导航继续
   next()

@@ -124,9 +124,11 @@ export default {
             this.reconnectTime++
             if(this.reconnectTime > 3) {
                 this.$message.error('与服务器失去连接')
+                that.reconnecting = false
                 return
             }
             if(!that.connectFailed) {
+                that.reconnecting = false
                 return
             }
             that.onListen()
@@ -179,6 +181,12 @@ export default {
             }
             this.pukeInfo.puke.splice(index, 0, poker)
         },
+        resetData() {
+            this.tribute.status = -1
+            this.roomInfo.status = 0
+            this.action.back.able = false
+            this.action.break.able = false
+        },
         async onListen() {
             let that = this
             if(!this.reconnecting) {
@@ -226,6 +234,7 @@ export default {
             }
             this.connectFailed = false
             this.reconnecting = false
+            console.log('connect end', this.reconnecting)
             this.$global.ws.onerror = function() {
                 console.log('服务器连接出错')
                 that.connectFailed = true
@@ -238,7 +247,12 @@ export default {
             }
             
             this.$global.ws.onmessage = mes => {
+                localStorage.setItem('last-pong', new Date().getTime())
+                if(mes.data === 'pong') {
+                    return
+                }
                 let data = utils.decode(mes.data)
+                console.log("recv", data)
                 that.reconnectTime = 0  //连接成功，重置重连次数
                 let temp
                 switch(data.info_type) {
@@ -288,6 +302,11 @@ export default {
                         }
                         temp.playerIndex = that.getIndexById(data.max_player)
                         that.lastPoker = temp
+                        temp = {
+                            onTurnIndex: that.getIndexById(data.on_turn),
+                            restTime: data.rest_time,
+                        }
+                        that.playInfo = temp
                         break
                     case 'poker':
                         that.pukeInfo.puke = data.puke.sort(this.compare)
@@ -311,6 +330,9 @@ export default {
                             result: data.result,
                         }
                         that.scoreInfo = temp
+
+                        // 重置一局的数据
+                        that.resetData()
                         break
                     case 'reconnect':
                         if(!data.success) {
@@ -334,6 +356,7 @@ export default {
                     case 'tributeStart':
                         that.roomInfo.status = 3
                         that.tribute.lord = data.tribute_lord
+                        that.tribute.status = -1
                         that.tribute.status = 0
                         break
                     case 'tributeProc':
@@ -372,8 +395,16 @@ export default {
 
         // 封装心跳机制函数
         beat() {
-            localStorage.setItem('last-login', new Date().getTime())
-            this.$global.send({info_type: 'test', data: null})
+            let lastPong = localStorage.getItem('last-pong')
+            let nowDate = new Date().getTime()
+            if(nowDate-lastPong > 19000) {
+                // 19秒收不到pong就重连
+                if(!this.reconnecting) {
+                    this.connectFailed = true
+                    this.toReconnect()
+                }
+            }
+            this.$global.send('ping')
         },
         // 发起收贡请求
         oneTributeChosen() {
@@ -398,9 +429,9 @@ export default {
         }
 
         // 当用户长时间不使用该应用，但在此进入依然是/room/add时，可自动跳转至首页
-        let lastLogin = localStorage.getItem('last-login')
+        let lastLogin = localStorage.getItem('last-pong')
         let nowDate = new Date().getTime()
-        if(nowDate-lastLogin > 15000) {
+        if(nowDate-lastLogin > 60000) {
             this.toCreateRoom()
         }
         // 创建数字到牌点数的map
@@ -455,7 +486,7 @@ export default {
                 let that = this
                 this.beatInterval = setInterval(()=> {
                     that.beat()
-                }, 10000)
+                }, 5000)
             }
         },
         'lastPoker': {
