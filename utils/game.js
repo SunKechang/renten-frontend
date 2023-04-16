@@ -635,5 +635,5 @@ export default {
         height = _height
         // reRender()
     },
-    initGame
+    initGame,
 }

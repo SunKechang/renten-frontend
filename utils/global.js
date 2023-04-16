@@ -4,6 +4,7 @@ export default {
         this.ws = newWs
     },
     send: function(data) {
+        console.log("send", data)
         if(!this.ws || this.ws === undefined || this.ws === null) {
             return
         }
@@ -15,11 +16,9 @@ export default {
             temp = 'ping'
         }
         if(this.ws.readyState === 1) {
-            console.log("send", temp)
             this.ws.send(temp)
         } else if(this.ws.readyState === 0) {   // 当连接处于出错状态时拒绝发送
             this.ws.onopen = () => {
-                console.log("waitsend", data)
                 that.ws.send(temp)
             }
         }
@@ -29,5 +28,8 @@ export default {
         heart: 1,   //红桃
         club: 2,    //花子
         diamond: 3  //方片
-    }
+    },
+    offer: 'offer',
+    answer: 'answer',
+    ice: '__ice_candidate',
 }

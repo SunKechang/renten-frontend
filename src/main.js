@@ -4,6 +4,7 @@ import router from './router'
 import global from '../utils/global'
 
 import { defineCustomElements as defineIonPhaser } from '@ion-phaser/core/loader';
+import WebRTC from '@/components/WebRTC'
 
 Vue.config.productionTip = false
 
@@ -11,6 +12,8 @@ Vue.prototype.$global = global
 
 Vue.config.ignoredElements = [/^ion-/];
 defineIonPhaser(window);
+
+Vue.component('WebRTC', WebRTC)
 
 router.beforeEach((to, from, next) => {
   if(from.name &&(to.path === '/room/add' || to.path === '/room/join')) {

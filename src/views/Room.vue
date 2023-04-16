@@ -4,15 +4,18 @@
             v-bind:game.prop="game"
             v-bind:initialize.prop="initialize"
         />
+        <WebRTC :sessionId="selfInfo.id" ref="webRTC"></WebRTC>
     </div>
 </template>
   
 <script>
+import WebRTC from '@/components/WebRTC.vue'
 import utils from '../../utils/decode'
 import phaser from '../../utils/game'
 let pokerPage = 54
 let smallKing = 13*4
 export default {
+    components: { WebRTC },
     name: 'RoomView',
     data() {
         return {
@@ -380,7 +383,26 @@ export default {
                         that.tributeRes = temp
                         console.log(that.tributeRes)
                         break
-                        
+                    case 'RTCJoin':
+                        that.$refs.webRTC.oneJoined(data.players, data.session_id, data.player_id)
+                        break
+                    case 'RTCMessage':
+                        console.log(data)
+                        switch(data.data.type) {
+                            case that.$global.offer:
+                                that.$refs.webRTC.oneOffered(data.data)
+                                break
+                            case that.$global.answer:
+                                that.$refs.webRTC.oneAnswered(data.data)
+                                break
+                            case that.$global.ice:
+                                that.$refs.webRTC.oneIced(data.data)
+                                break
+                        }
+                        break
+                    case 'RTCLeave':
+                        that.$refs.oneLeaved(data.session_id)
+                        break
                 }
             }
         },
