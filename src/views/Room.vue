@@ -4,7 +4,7 @@
             v-bind:game.prop="game"
             v-bind:initialize.prop="initialize"
         />
-        <WebRTC :sessionId="selfInfo.id" ref="webRTC"></WebRTC>
+        <WebRTC :sessionId="selfInfo.id" ref="webRTC" @update-able="updateRTCstatux"></WebRTC>
     </div>
 </template>
   
@@ -72,6 +72,11 @@ export default {
                 lord: false,
             },  // 该玩家的收、交贡情况
             tributeRes: null,   // 交贡结果
+            able: {
+                webRTCAble: false,
+                mainAble: false,
+                phaserAble: false,
+            }
         }
     },
     methods: {
@@ -190,6 +195,15 @@ export default {
             this.action.back.able = false
             this.action.break.able = false
         },
+        updateRTCstatux() {
+            this.able.webRTCAble = true
+        },
+        updatePhaserStatus() {
+            this.able.phaserAble = true
+        },
+        updateMainStatus() {
+            this.able.mainAble = true
+        },
         async onListen() {
             let that = this
             if(!this.reconnecting) {
@@ -237,7 +251,6 @@ export default {
             }
             this.connectFailed = false
             this.reconnecting = false
-            console.log('connect end', this.reconnecting)
             this.$global.ws.onerror = function() {
                 console.log('服务器连接出错')
                 that.connectFailed = true
@@ -255,7 +268,6 @@ export default {
                     return
                 }
                 let data = utils.decode(mes.data)
-                console.log("recv", data)
                 that.reconnectTime = 0  //连接成功，重置重连次数
                 let temp
                 switch(data.info_type) {
@@ -388,6 +400,10 @@ export default {
                         break
                     case 'RTCMessage':
                         console.log(data)
+                        if(!that.$refs.webRTC.webRTC) {
+                            console.error('设备不支持语音通话')
+                            return
+                        }
                         switch(data.data.type) {
                             case that.$global.offer:
                                 that.$refs.webRTC.oneOffered(data.data)
@@ -475,6 +491,7 @@ export default {
             map[i] = temp
         }
         this.numPokerMap = map
+        this.updateMainStatus()
     },
     beforeDestroy() {
         // 用户手动退出，关闭websocket连接
@@ -485,6 +502,9 @@ export default {
         // 设置game为null，再次加载时获取新的game变量，解决BUG[再次进入/room界面空白]
         this.game = null
         this.beatInterval && clearInterval(this.beatInterval)
+        this.able.webRTCAble = false
+        this.able.mainAble = false
+        this.able.phaserAble = false
     },
     watch: {
         'pukeInfo.puke': {
@@ -515,6 +535,14 @@ export default {
             handler(val) {
                 this.checkExtra(val)
             }
+        },
+        'able': {
+            handler: function() {
+                if(this.able.webRTCAble && this.able.mainAble && this.able.phaserAble) {
+                    this.onListen()
+                }
+            },
+            deep: true
         }
     }
 }

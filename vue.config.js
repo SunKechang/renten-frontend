@@ -3,6 +3,7 @@ let productionGzipExtensions = /\.(js|css|json|txt|html|ico|svg)(\?.*)?$/i;
 module.exports = {
   transpileDependencies: true,
   devServer: {
+    port: 80,
     proxy: {
       "/api": {
         // ws://8.130.97.117:88/

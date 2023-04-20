@@ -1,11 +1,12 @@
 <template>
     <div class="video-box" ref="video-box" id="videos">
-        <video class="video-mine" autoplay controls ref="video-mine"></video>
     </div>
 </template>
 
 <script>
-
+import phaser from '../../utils/game'
+// eslint-disable-next-line
+import adapter from 'webrtc-adapter'
 export default {
     name: 'WebRTC',
     data() {
@@ -14,6 +15,11 @@ export default {
             webRTC: false,
             localStream: null,
             peerList: new Map,   // 与其他用户的RTC连接对象
+            sentOffer: false,
+            mute: true,
+            sound: false,
+            joined: null,
+            newPlayer: -1,
         }
     },
     methods: {
@@ -23,47 +29,64 @@ export default {
             let iceServer = { // stun 服务，如果要做到 NAT 穿透，还需要 turn 服务
                 "iceServers": [
                     {
-                        "url": "stun:stun.l.google.com:19302"
+                        "url": "stun:stun.l.google.com:19302",
+                        "urls": "stun:stun.l.google.com:19302"
                     }
-                ]
-            };
-            let PeerConnection = (window.RTCPeerConnection ||
-                    window.webkitRTCPeerConnection ||
-                    window.mozRTCPeerConnection)
+                ],
+                "iceTransportPolicy": "all",
+            }
+            // let PeerConnection = (window.RTCPeerConnection ||
+            //         window.webkitRTCPeerConnection ||
+            //         window.mozRTCPeerConnection)
             // 创建 peer 实例
-            let peer = new PeerConnection(iceServer)
+            let peer = new RTCPeerConnection(iceServer)
             //向PeerConnection中加入需要发送的流
-            peer.addStream(this.localStream)
+            this.localStream.getTracks().forEach(track => {
+                peer.addTrack(track, this.localStream)
+            })
 
             // 如果检测到媒体流连接到本地，将其绑定到一个video标签上输出
             // v.account 就是上面提到的 A-B
             peer.onaddstream = function(event){
-                let videos = document.querySelector('#video' + v.account)
-                if (videos) { // 如果页面上有这个标识的播放器，就直接赋值 src
-                    videos.srcObject = event.stream;
+                let video = document.querySelector('#video' + v.account)
+                if (video) { // 如果页面上有这个标识的播放器，就直接赋值 src
+                    video.srcObject = event.stream;
                 } else {
-                    let video = document.createElement('video')
+                    video = document.createElement('video')
                     video.controls = true
                     video.autoplay = 'autoplay'
+                    video.playsinline = true
                     video.srcObject = event.stream
                     video.id = 'video'+v.account
                     // video加上对应标识，这样在对应客户端断开连接后，可以移除相应的video
                     videoBox.append(video)
                 }
+                video.pause()
             }
             // 发送ICE候选到其他客户端
             peer.onicecandidate = (event) => {
                 if (event.candidate) {
-                    // ··· 发送 ICE
-                    this.$global.ws.send(JSON.stringify({
+                    // 间隔500ms发送，防止ios上他在offer之前发送
+                    setTimeout(()=> {
+                        that.$global.ws.send(JSON.stringify({
                         info_type: 'RTCMessage', 
                         data: {
                             type: that.$global.ice,
-                            sender: that.sessionId,
-                            recver: v.account,
+                            sender: Number(that.sessionId),
+                            recver: Number(v.account),
                             candidate: event.candidate
                         }
                     }))
+                    }, 500)
+                }
+            }
+            peer.oniceconnectionstatechange = () => {
+                if (peer.iceConnectionState === 'connected') {
+                    // 连接已建立完成
+                    console.log('conected')
+                } else if (peer.iceConnectionState === 'disconnected') {
+                    // 连接断开
+                    console.log('disconnected')
                 }
             }
             this.peerList.set(v.account, peer)
@@ -74,24 +97,22 @@ export default {
             peer.createOffer({
                 offerToReceiveAudio: 0,
                 offerToReceiveVideo: 1
-            }).then((desc) => {
-                peer.setLocalDescription(desc, () => {
+            }).then((offer)=> {
+                peer.setLocalDescription(offer).then(()=>{
                     let data = JSON.stringify({
                         info_type: 'RTCMessage', 
                         data: {
                             type: that.$global.offer,
-                            sender: that.sessionId,
-                            recver: key,
+                            sender: Number(that.sessionId),
+                            recver: Number(key),
                             sdp: peer.localDescription
                         }
                     })
                     that.$global.ws.send(data)
-                }).catch(err=> {
-                    console.log(err)
                 })
-            }).catch(err=> {
-                console.log(err)
             })
+            
+            
         },
         oneJoined(data, sessionId, mineId) {
             if (this.sessionId === 0) {
@@ -119,42 +140,51 @@ export default {
         },
         oneOffered(data) {
             let that = this
-            this.peerList.get(data.sender).setRemoteDescription(new RTCSessionDescription(data.sdp))
-            this.peerList.get(data.sender).createAnswer().then((desc) => {
-                    that.peerList.get(data.sender).setLocalDescription(desc, () => {
+            if(!this.peerList.get(data.sender)) {
+                let obj = {}
+                obj.account = data.sender
+                this.getPeerConnection(obj)
+            }
+            this.peerList.get(data.sender).setRemoteDescription(data.sdp).then(()=>{
+                that.peerList.get(data.sender).createAnswer().then((desc) => {
+                    that.peerList.get(data.sender).setLocalDescription(desc).then(() => {
                         let temp = JSON.stringify({
                             info_type: 'RTCMessage', 
                             data: {
                                 type: that.$global.answer,
-                                sender: that.sessionId,
-                                recver: data.sender,
+                                sender: Number(that.sessionId),
+                                recver: Number(data.sender),
                                 sdp: that.peerList.get(data.sender).localDescription
                             }
                         })
                         that.$global.ws.send(temp)
+                    }).catch(err=> {
+                        console.error(err)
                     })
-                }, (err) => {
+                }).catch(err => {
                     console.log(err)
                 })
+            })
+            
         },
         oneAnswered(data) {
-            let that = this
             if(!this.peerList.get(data.sender)) {
-                setTimeout(()=>{
-                    that.peerList.get(data.sender).setRemoteDescription(data.sdp, function(){
-                    }, (err) => {
-                        console.log(err)
-                    })        
-                }, 500)
-            } else {
-                this.peerList.get(data.sender).setRemoteDescription(data.sdp, function(){
-                }, (err) => {
-                    console.log(err)
-                })
+                let obj = {}
+                obj.account = data.sender
+                this.getPeerConnection(obj)
             }
+            this.peerList.get(data.sender).setRemoteDescription(data.sdp, function(){
+            }, (err) => {
+                console.log(err)
+            })
         },
         oneIced(data) {
             if (data.candidate) {
+                if(!this.peerList.get(data.sender)) {
+                    let obj = {}
+                    obj.account = data.sender
+                    this.getPeerConnection(obj)
+                }
                 this.peerList.get(data.sender).addIceCandidate(data.candidate).catch((e) => {
                     console.log('err', e)
                 })
@@ -162,29 +192,63 @@ export default {
         },
         oneLeaved(sessionId) {
             if(this.peerList.get(sessionId)) {
+                this.peerList.set(sessionId, null)
                 let dom = document.querySelector('#video' + sessionId)
                 if (dom) {
                     dom.remove()
                 }
             }
+        },
+        changeMute() {
+            this.mute = !this.mute
+            let tracks = this.localStream.getTracks()
+            tracks.forEach(track=> {
+                track.enabled = !this.mute
+            })
+        },
+        changeSound() {
+            this.sound = !this.sound
+            var videos = document.getElementsByTagName("video")
+            for(var i=0; i<videos.length; i++) {
+                if(this.sound) {
+                    videos[i].play()
+                } else {
+                    videos[i].pause()
+                }
+                
+            }
         }
     },
     mounted() {
         let that = this
-        let myVideo = this.$refs['video-mine']
-        navigator
+        phaser.setWebRTC(this)
+        if(!navigator.mediaDevices) {
+            this.$emit('update-able')
+        } else {
+            navigator
             .mediaDevices
             .getUserMedia({ audio: false, video: true })
-            .then(stream => { 
-            myVideo.srcObject = stream   
-            that.localStream = stream
-            that.webRTC = true
-            }).catch(error => { 
-            console.error('Error accessing media devices.', error); 
-            that.webRTC = false
+            .then(stream => {
+                that.localStream = stream
+                stream.getTracks().forEach(track=> {
+                    track.enabled = !that.mute
+                })
+                
+                that.webRTC = true
+            }).catch((err) => {
+                alert(err)
+                that.webRTC = false
+            }).finally(()=> {
+                that.$emit('update-able')
             })
+        }
     },
     beforeDestroy() {
+        if(this.localStream) {
+            this.localStream.getTracks().forEach(track=> {
+                track.stop()
+            })
+        }
         let dom = document.querySelector('#videos')
         if (dom) {
             dom.remove()

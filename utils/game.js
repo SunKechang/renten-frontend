@@ -1,6 +1,6 @@
 
 import Phaser from 'phaser'
-let vue
+let vue, rtc
 let height, width
 let percent2Px = function(num, isWidth) {
     if(isWidth) {
@@ -487,12 +487,20 @@ function initGame() {
                     this.load.image('timer', 'http://8.130.97.117:88/timer.png')
                     this.load.image('car_back', 'http://8.130.97.117:88/car_back.jpg')
                     this.load.image('button', 'http://8.130.97.117:88/button.png')
+                    this.load.image('mute', 'http://8.130.97.117:88/mute.png')
+                    this.load.image('unmute', 'http://8.130.97.117:88/unmute.png')
+                    this.load.image('sound', 'http://8.130.97.117:88/sound.png')
+                    this.load.image('nosound', 'http://8.130.97.117:88/nosound.png')
                 } else {
                     this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
                     this.load.image('player', '/resource/player.png')
                     this.load.image('timer', '/resource/timer.png')
                     this.load.image('car_back', '/resource/car_back.jpg')
                     this.load.image('button', '/resource/button.png')
+                    this.load.image('mute', '/resource/mute.png')
+                    this.load.image('unmute', '/resource/unmute.png')
+                    this.load.image('sound', '/resource/sound.png')
+                    this.load.image('nosound', '/resource/nosound.png')
                 }
                 
                 // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
@@ -617,7 +625,33 @@ function initGame() {
                         child.visible = value
                     })
                 })
-                vue.onListen()
+                let audio = that.add.image(percent2Px(95, true), percent2Px(10, false), 'mute')
+                audio.setDisplaySize(percent2Px(5, true), percent2Px(5, true))
+                audio.setInteractive()
+                audio.on('pointerdown', ()=> {
+                    rtc.changeMute()
+                })
+                rtc.$watch('mute', (value)=> {
+                    if(value) {
+                        audio.setTexture('mute')
+                    } else {
+                        audio.setTexture('unmute')
+                    }
+                })
+                let sound = that.add.image(percent2Px(88, true), percent2Px(10, false), 'nosound')
+                sound.setDisplaySize(percent2Px(5, true), percent2Px(5, true))
+                sound.setInteractive()
+                sound.on('pointerdown', ()=> {
+                    rtc.changeSound()
+                })
+                rtc.$watch('sound', (value)=> {
+                    if(value) {
+                        sound.setTexture('sound')
+                    } else {
+                        sound.setTexture('nosound')
+                    }
+                })
+                vue.updatePhaserStatus()
             },
             update: function() {
             },
@@ -629,6 +663,9 @@ function initGame() {
 export default {
     setVue: function(_vue) {
         vue = _vue
+    },
+    setWebRTC: function(_rtc) {
+        rtc = _rtc
     },
     setWindow: function(_width, _height) {
         width = _width
