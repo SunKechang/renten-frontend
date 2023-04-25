@@ -399,7 +399,6 @@ export default {
                         that.$refs.webRTC.oneJoined(data.players, data.session_id, data.player_id)
                         break
                     case 'RTCMessage':
-                        console.log(data)
                         if(!that.$refs.webRTC.webRTC) {
                             console.error('设备不支持语音通话')
                             return
@@ -417,7 +416,7 @@ export default {
                         }
                         break
                     case 'RTCLeave':
-                        that.$refs.oneLeaved(data.session_id)
+                        that.$refs.webRTC.oneLeaved(data.session_id)
                         break
                 }
             }
@@ -429,6 +428,7 @@ export default {
                 min = document.documentElement.clientWidth
             }
             phaser.setWindow(max, min)
+            this.initialize = true
         },
 
         // 封装心跳机制函数
@@ -456,7 +456,6 @@ export default {
         phaser.setVue(this)
         this.setWindowInfo()
         this.roomId = this.$route.query.room_id
-        this.initialize = true
         this.beatInterval && clearInterval(this.beatInterval)
         let sessionId = sessionStorage.getItem('id')
         if(sessionId != null && sessionId > 0) {

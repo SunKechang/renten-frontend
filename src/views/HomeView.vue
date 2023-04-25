@@ -1,6 +1,6 @@
 <template>
   <div class="home" style="display: flex; justify-content: center;">
-    <div style="display: flex; flex-direction: column;">
+    <div style="display: flex; flex-direction: column;justify-content: center;">
       <div>
         <button class="tdButton" @click="addRoom">创建房间</button>
       </div>
@@ -48,6 +48,9 @@ export default {
     width: 100%;
     height: 100%;
     background-size: cover;
+    background-color: antiquewhite;
+    overflow-x: hidden;
+    overflow-y: hidden;
   }
 
   .tdButton {
@@ -66,7 +69,7 @@ export default {
     text-align: center;
     border: 0;
     transition: all .1s ease;
-  } 
+  }
 
   .tdButton:active {
     box-shadow: 0px 3px 0px rgba(219,31,5,1), 0px 3px 6px rgba(0,0,0,.9);

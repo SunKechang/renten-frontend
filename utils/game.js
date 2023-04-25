@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser'
 let vue, rtc
 let height, width
@@ -106,7 +105,7 @@ function addPoker(that, pokerGroup) {
     })
 }
 
-function addButton(content, widthPercent, heightPercent, that) { 
+function addButton(content, widthPercent, heightPercent, that) {
     let button = that.add.sprite(percent2Px(widthPercent, true), percent2Px(heightPercent, false), 'button')
     let text = that.add.text(0, 0, content, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: '24px', fill: 'black' })
     button.setDisplaySize(text.width + 20, text.height + 10)
@@ -227,7 +226,7 @@ function renderScore(value, scoreGroup, that) {
 
 function renderBack(backGroup, that) {
     backGroup.clear(true, true)
-    let back = that.add.image(percent2Px(50, true), percent2Px(50, false), 'car_back')
+    let back = that.add.image(percent2Px(50, true), percent2Px(50, false), 'back')
     back.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
     back.setPosition(width/2, height/2)
 
@@ -323,7 +322,7 @@ function renderLastPoker(value, lastPokerGroup, that) {
         lastPokerGroup.add(poker)
     }
     let pos = index2Pos(value.playerIndex)
-    lastPokerGroup.incXY(percent2Px(pokerPosition[pos].x, true), percent2Px(pokerPosition[pos].y))
+    lastPokerGroup.incXY(percent2Px(pokerPosition[pos].x, true), percent2Px(pokerPosition[pos].y, false))
 }
 
 function renderScoreTime(value, scoreTimeGroup, that) {
@@ -446,24 +445,6 @@ function renderTributeAni(value, that) {
     })
 }
 
-// 重新渲染整个页面
-// function reRender() {
-//     if(backGroup && backGroup.children) {
-//         backGroup.children.iterate(function(child) {
-//             child.setPosition(width/2, height/2)
-//             child.setDisplaySize(percent2Px(100, true), percent2Px(100, false))
-//         })
-//     }
-//     if(buttonGroup && buttonGroup.children) {
-//         buttonGroup.children.iterate(function(child) {
-//             let pos = child.getData('position')
-//             child.setPosition(percent2Px(pos.x, true), percent2Px(pos.y, false))
-//             if(child.getData('content')) {
-//                 child.setText(child.getData('content'))
-//             }
-//         })
-//     }
-// }
 
 function changeGroupVisible(group, visible) {
     group.getChildren().forEach(child=> {
@@ -485,7 +466,7 @@ function initGame() {
                     this.load.atlas('pokers', 'http://8.130.97.117:88/pokers.png', 'http://8.130.97.117:88/pokers.json');
                     this.load.image('player', 'http://8.130.97.117:88/player.png')
                     this.load.image('timer', 'http://8.130.97.117:88/timer.png')
-                    this.load.image('car_back', 'http://8.130.97.117:88/car_back.jpg')
+                    this.load.image('back', 'http://8.130.97.117:88/back.jpg')
                     this.load.image('button', 'http://8.130.97.117:88/button.png')
                     this.load.image('mute', 'http://8.130.97.117:88/mute.png')
                     this.load.image('unmute', 'http://8.130.97.117:88/unmute.png')
@@ -495,7 +476,7 @@ function initGame() {
                     this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
                     this.load.image('player', '/resource/player.png')
                     this.load.image('timer', '/resource/timer.png')
-                    this.load.image('car_back', '/resource/car_back.jpg')
+                    this.load.image('back', '/resource/back.jpg')
                     this.load.image('button', '/resource/button.png')
                     this.load.image('mute', '/resource/mute.png')
                     this.load.image('unmute', '/resource/unmute.png')

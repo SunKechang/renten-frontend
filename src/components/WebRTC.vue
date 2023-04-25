@@ -1,5 +1,5 @@
 <template>
-    <div class="video-box" ref="video-box" id="videos">
+    <div class="video-box" ref="video-box" id="audios">
     </div>
 </template>
 
@@ -29,9 +29,13 @@ export default {
             let iceServer = { // stun 服务，如果要做到 NAT 穿透，还需要 turn 服务
                 "iceServers": [
                     {
-                        "url": "stun:stun.l.google.com:19302",
-                        "urls": "stun:stun.l.google.com:19302"
-                    }
+                        "urls": "stun:stun.chat.bilibili.com:3478"
+                    },
+                    {
+                        "urls": "turn:redten.fun:3478",
+                        "username": "skc",
+                        "credential": "skcskcskc",
+                    },
                 ],
                 "iceTransportPolicy": "all",
             }
@@ -48,20 +52,21 @@ export default {
             // 如果检测到媒体流连接到本地，将其绑定到一个video标签上输出
             // v.account 就是上面提到的 A-B
             peer.onaddstream = function(event){
-                let video = document.querySelector('#video' + v.account)
-                if (video) { // 如果页面上有这个标识的播放器，就直接赋值 src
-                    video.srcObject = event.stream;
+                let audio = document.querySelector('#audio' + v.account)
+                if (audio) { // 如果页面上有这个标识的播放器，就直接赋值 src
+                    audio.srcObject = event.stream;
                 } else {
-                    video = document.createElement('video')
-                    video.controls = true
-                    video.autoplay = 'autoplay'
-                    video.playsinline = true
-                    video.srcObject = event.stream
-                    video.id = 'video'+v.account
+                    audio = document.createElement('audio')
+                    audio.controls = true
+                    audio.autoplay = 'autoplay'
+                    audio.playsinline = true
+                    audio.hidden = true
+                    audio.srcObject = event.stream
+                    audio.id = 'audio'+v.account
                     // video加上对应标识，这样在对应客户端断开连接后，可以移除相应的video
-                    videoBox.append(video)
+                    videoBox.append(audio)
                 }
-                video.pause()
+                audio.pause()
             }
             // 发送ICE候选到其他客户端
             peer.onicecandidate = (event) => {
@@ -95,8 +100,8 @@ export default {
             let that = this
             //发送offer，发送本地session描述
             peer.createOffer({
-                offerToReceiveAudio: 0,
-                offerToReceiveVideo: 1
+                offerToReceiveAudio: 1,
+                offerToReceiveVideo: 0
             }).then((offer)=> {
                 peer.setLocalDescription(offer).then(()=>{
                     let data = JSON.stringify({
@@ -193,7 +198,7 @@ export default {
         oneLeaved(sessionId) {
             if(this.peerList.get(sessionId)) {
                 this.peerList.set(sessionId, null)
-                let dom = document.querySelector('#video' + sessionId)
+                let dom = document.querySelector('#audio' + sessionId)
                 if (dom) {
                     dom.remove()
                 }
@@ -208,12 +213,12 @@ export default {
         },
         changeSound() {
             this.sound = !this.sound
-            var videos = document.getElementsByTagName("video")
-            for(var i=0; i<videos.length; i++) {
+            var audios = document.getElementsByTagName("audio")
+            for(var i=0; i<audios.length; i++) {
                 if(this.sound) {
-                    videos[i].play()
+                    audios[i].play()
                 } else {
-                    videos[i].pause()
+                    audios[i].pause()
                 }
                 
             }
@@ -227,7 +232,7 @@ export default {
         } else {
             navigator
             .mediaDevices
-            .getUserMedia({ audio: false, video: true })
+            .getUserMedia({ audio: true, video: false })
             .then(stream => {
                 that.localStream = stream
                 stream.getTracks().forEach(track=> {
@@ -249,7 +254,7 @@ export default {
                 track.stop()
             })
         }
-        let dom = document.querySelector('#videos')
+        let dom = document.querySelector('#audios')
         if (dom) {
             dom.remove()
         }
