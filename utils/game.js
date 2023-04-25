@@ -28,6 +28,14 @@ let pokerPosition = [
     {x: 40, y: 35},     // 自己
 ]
 
+let toolPosition = {
+    size: 10,
+    home: {y: 90},     // 声音
+    share: {y: 80},      // 话筒
+    mic: {y: 70},     // 分享
+    sound: {y: 60},     // home
+}
+
 let backPoker = 54  // 背面牌
 
 let pokerGroup
@@ -231,13 +239,14 @@ function renderBack(backGroup, that) {
     back.setPosition(width/2, height/2)
 
     // 添加返回至首页按钮
-    let temp = addButton('首页', 70, 10, that)
-    temp.button.on('pointerdown', ()=> {
+    let home = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.home.y, false), 'home')
+    home.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+    home.setInteractive()
+    home.on('pointerdown', ()=> {
         vue.toCreateRoom()
     })
     backGroup.add(back)
-    backGroup.add(temp.button)
-    backGroup.add(temp.text)
+    backGroup.add(home)
 }
 
 function renderShare(value, shareGroup, that) {
@@ -462,27 +471,16 @@ function initGame() {
         scene: {
             preload: function() {
                 this.cameras.main.setBackgroundColor('#24252A')
-                if(process.env.NODE_ENV === 'development') {
-                    this.load.atlas('pokers', 'http://8.130.97.117:88/pokers.png', 'http://8.130.97.117:88/pokers.json');
-                    this.load.image('player', 'http://8.130.97.117:88/player.png')
-                    this.load.image('timer', 'http://8.130.97.117:88/timer.png')
-                    this.load.image('back', 'http://8.130.97.117:88/back.jpg')
-                    this.load.image('button', 'http://8.130.97.117:88/button.png')
-                    this.load.image('mute', 'http://8.130.97.117:88/mute.png')
-                    this.load.image('unmute', 'http://8.130.97.117:88/unmute.png')
-                    this.load.image('sound', 'http://8.130.97.117:88/sound.png')
-                    this.load.image('nosound', 'http://8.130.97.117:88/nosound.png')
-                } else {
-                    this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
-                    this.load.image('player', '/resource/player.png')
-                    this.load.image('timer', '/resource/timer.png')
-                    this.load.image('back', '/resource/back.jpg')
-                    this.load.image('button', '/resource/button.png')
-                    this.load.image('mute', '/resource/mute.png')
-                    this.load.image('unmute', '/resource/unmute.png')
-                    this.load.image('sound', '/resource/sound.png')
-                    this.load.image('nosound', '/resource/nosound.png')
-                }
+                this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
+                this.load.image('player', '/resource/player.png')
+                this.load.image('timer', '/resource/timer.png')
+                this.load.image('back', '/resource/back.jpg')
+                this.load.image('button', '/resource/button.png')
+                this.load.image('mute', '/resource/mute.png')
+                this.load.image('unmute', '/resource/unmute.png')
+                this.load.image('sound', '/resource/sound.png')
+                this.load.image('nosound', '/resource/nosound.png')
+                this.load.image('home', '/resource/home.png')
                 
                 // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
             },
@@ -601,13 +599,12 @@ function initGame() {
                     child.visible = false
                 })
                 vue.$watch('reconnecting', (value)=> {
-                    console.log('watch reconnecting', value)
                     reconnectGroup.getChildren().forEach(child => {
                         child.visible = value
                     })
                 })
-                let audio = that.add.image(percent2Px(95, true), percent2Px(10, false), 'mute')
-                audio.setDisplaySize(percent2Px(5, true), percent2Px(5, true))
+                let audio = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.mic.y, false), 'mute')
+                audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                 audio.setInteractive()
                 audio.on('pointerdown', ()=> {
                     rtc.changeMute()
@@ -615,12 +612,14 @@ function initGame() {
                 rtc.$watch('mute', (value)=> {
                     if(value) {
                         audio.setTexture('mute')
+                        audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                     } else {
                         audio.setTexture('unmute')
+                        audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                     }
                 })
-                let sound = that.add.image(percent2Px(88, true), percent2Px(10, false), 'nosound')
-                sound.setDisplaySize(percent2Px(5, true), percent2Px(5, true))
+                let sound = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.sound.y, false), 'nosound')
+                sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                 sound.setInteractive()
                 sound.on('pointerdown', ()=> {
                     rtc.changeSound()
@@ -628,8 +627,10 @@ function initGame() {
                 rtc.$watch('sound', (value)=> {
                     if(value) {
                         sound.setTexture('sound')
+                        sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                     } else {
                         sound.setTexture('nosound')
+                        sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
                     }
                 })
                 vue.updatePhaserStatus()
