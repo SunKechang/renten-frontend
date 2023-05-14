@@ -38,6 +38,9 @@ let toolPosition = {
 
 let backPoker = 54  // 背面牌
 
+const fontSize = 22
+const downFontSize = 21
+
 let pokerGroup
 let playerGroup
 let buttonGroup
@@ -51,6 +54,7 @@ let scoreTimeGroup
 let failGroup
 let shareGroup
 let tributeGroup
+let preLoadText
 
 function index2Pos(index) {
     if(index === vue.selfInfo.index) {
@@ -114,19 +118,28 @@ function addPoker(that, pokerGroup) {
 }
 
 function addButton(content, widthPercent, heightPercent, that) {
-    let button = that.add.sprite(percent2Px(widthPercent, true), percent2Px(heightPercent, false), 'button')
-    let text = that.add.text(0, 0, content, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: '24px', fill: 'black' })
-    button.setDisplaySize(text.width + 20, text.height + 10)
+    let button = that.add.sprite(percent2Px(widthPercent, true), percent2Px(heightPercent, false), 'button').setFrame(0).setInteractive()
+    let text = that.add.text(0, 0, content, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: fontSize, fill: 'black' })
+    button.setDisplaySize(text.width + 23, text.height + 13)
     text.setOrigin(0.5)
     text.setX(button.x)
     text.setY(button.y)
-    button.setInteractive()
     button.on('pointerdown', ()=>{
-        // button.setFrame(1, true, true)
+        button.setFrame(1)
+        text.setFontSize(downFontSize)
+        button.setDisplaySize(text.width + 20, text.height + 10)
     })
     button.on('pointerup', ()=>{
-        // button.setFrame(0, true, true)
+        button.setFrame(0)
+        text.setFontSize(fontSize)
+        button.setDisplaySize(text.width + 23, text.height + 13)
     })
+    button.on('pointerout', () => {
+        button.setFrame(0)
+        text.setFontSize(fontSize)
+        button.setDisplaySize(text.width + 23, text.height + 13)
+      });
+    button.setInteractive()
     button.setData('position', {x: widthPercent, y: heightPercent})
     text.setData('position', {x: button.x, y: button.y})
     text.setData('content', content)
@@ -195,7 +208,7 @@ function renderPlayButton(buttonGroup, pokerButtonGroup, that) {
                 content = '取消准备'
             }
             temp = addButton(content, 40, 60, that)
-            temp.button.on('pointerdown', ()=> {
+            temp.button.on('pointerup', ()=> {
                 vue.updateStatus()
             })
             buttonGroup.add(temp.button)
@@ -270,7 +283,6 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
     if(value.onTurnIndex === -1) {
         return
     }
-    let time1 = new Date().getTime()
     let pos = index2Pos(value.onTurnIndex)
     let restTime = that.add.text(percent2Px(timerPosition[pos].x + 2, true), percent2Px(timerPosition[pos].y, false), '', { fontSize: '24px', fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
     let timer = that.add.image(percent2Px(timerPosition[pos].x, true), percent2Px(timerPosition[pos].y, false), 'timer')
@@ -286,7 +298,6 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
     pokerButtonGroup.clear(true, true)
     let cancelTemp = addButton('重选', 25, 60, that)
     let runTemp = addButton('出牌', 40, 60, that)
-    cancelTemp.button.setInteractive()
     cancelTemp.button.on('pointerdown', ()=> {
         pokerGroup.getChildren().forEach((poker)=> {
             poker.setData('chosen', false)
@@ -303,11 +314,8 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
         })
         vue.sendPoker(chosenPokers)
     })
-    let time2 = new Date().getTime()
-    console.log(time2-time1)
-    if(vue.lastPoker.action !== 'nextTurn') {
+    if(vue.lastPoker.action !== 'nextTurn' && vue.lastPoker.action !== 'break' && vue.lastPoker.action !== 'back') {
         let passTemp = addButton('过', 55, 60, that)
-        passTemp.button.setInteractive()
         passTemp.button.on('pointerdown', ()=> {
             vue.sendPass()
         })
@@ -344,7 +352,6 @@ function renderExtraButton(value, extraGroup, that) {
     extraGroup.clear(true, true)
     if(value.break.able) {
         let breakTemp = addButton('叉', 70, 60, that)
-        breakTemp.button.setInteractive()
         breakTemp.button.on('pointerdown', ()=> {
             vue.sendBreak()
         })
@@ -352,7 +359,6 @@ function renderExtraButton(value, extraGroup, that) {
         extraGroup.add(breakTemp.text)
     } else if (value.back.able) {
         let backTemp = addButton('钩', 70, 60, that)
-        backTemp.button.setInteractive()
         backTemp.button.on('pointerdown', ()=> {
             vue.sendBack()
         })
@@ -367,7 +373,6 @@ function renderFail(value, failGroup, buttonGroup, that) {
     if(value) {
         let connectText = that.add.text(percent2Px(30, true), percent2Px(40, false), '重连失败，您可以返回首页重新进入', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
         let createTemp = addButton('重新进入', 50, 60, that)
-        createTemp.button.setInteractive()
         createTemp.button.on('pointerdown', ()=> {
             vue.toCreateRoom()
         })
@@ -461,6 +466,9 @@ function changeGroupVisible(group, visible) {
     })
 }
 
+function preLoadAni(that) {
+    preLoadText = that.add.text(0, 0, '资源加载中', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: fontSize, fill: 'white' })
+}
 
 // 封装初始化游戏为函数
 function initGame() {
@@ -470,18 +478,18 @@ function initGame() {
         type: Phaser.AUTO,
         scene: {
             preload: function() {
-                this.cameras.main.setBackgroundColor('#24252A')
+                preLoadAni(this)
+                this.cameras.main.setBackgroundColor('#ccc')
                 this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
                 this.load.image('player', '/resource/player.png')
                 this.load.image('timer', '/resource/timer.png')
                 this.load.image('back', '/resource/back.jpg')
-                this.load.image('button', '/resource/button.png')
+                this.load.spritesheet('button', '/resource/button.png', { frameWidth: 575, frameHeight: 235})
                 this.load.image('mute', '/resource/mute.png')
                 this.load.image('unmute', '/resource/unmute.png')
                 this.load.image('sound', '/resource/sound.png')
                 this.load.image('nosound', '/resource/nosound.png')
                 this.load.image('home', '/resource/home.png')
-                
                 // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
             },
             create: function() {
@@ -503,6 +511,7 @@ function initGame() {
                 let reconnectGroup = this.add.group()
                 // 渲染背景
                 renderBack(backGroup, this)
+                preLoadText.destroy()
                 console.log("loaded back")
     
                 vue.$watch('roomInfo.status', (value)=> {

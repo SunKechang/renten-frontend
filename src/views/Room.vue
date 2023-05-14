@@ -90,13 +90,8 @@ export default {
         updataSeen() {
             this.$global.ws.send(JSON.stringify({info_type: 'play', data: {action: 'seenCard', pokers: []}}))
         },
-        num2Puke(num) {
-            return {
-                value: Math.floor(num/4) + 1,
-                color: num%4
-            }
-        },
         sendPoker(pokers) {
+            pokers.sort(this.compare)
             this.$global.ws.send(JSON.stringify({info_type: 'play', data: {action: 'follow', pokers: pokers}}))
         },
         sendPass() {
@@ -141,17 +136,47 @@ export default {
             }
             that.onListen()
         },
+        // 检查这个牌是否支持被叉，temp为数字形式
+        ableToBreak(temp) {
+            let pokers = []
+            temp.forEach(num=> {
+                pokers.push(this.numPokerMap[num])
+            })
+            if(pokers.length === 1) {
+                return true
+            }
+            const Avalue = 12
+            if (pokers.length < 3) {
+                return false
+            }
+            for (let i = 1; i < pokers.length; i++) {
+                if (pokers[i - 1] < 1 || pokers[i - 1] >= Avalue) {
+                    return false
+                }
+                if (pokers[i] - pokers[i - 1] !== 1) {
+                    return false
+                }
+            }
+            return true
+        },
         // 检查额外操作：勾，叉是否成立
         checkExtra(temp) {
             this.action.back.able = false
             this.action.break.able = false
             if(temp.playerIndex !== this.selfInfo.index) {
-                if(temp.pokers.length == 1) {
+                // 检查叉
+                if(this.ableToBreak(temp.pokers)) {
                     let ablePuke = []
+                    let ableCheck = 0
+                    let ableIndex = 0
                     for(let i=0;i<this.numPuke.length;i++) {
-                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[0]]) {
+                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[ableIndex]]) {
                             ablePuke.push(this.pukeInfo.puke[i])
-                            if(ablePuke.length >= 2) {
+                            if(++ableCheck >= 2) {
+                                ableCheck = 0
+                                ableIndex++
+                            }
+                            if(ableIndex >= temp.pokers.length) {
                                 let tempAction = {
                                     able: true,
                                     puke: ablePuke
@@ -162,15 +187,22 @@ export default {
                         }
                     }
                 }
+                // 检查勾
                 if(temp.action === 'break') {
+                    let ableIndex = 0
+                    let ablePuke = []
                     for(let i=0;i<this.numPuke.length;i++) {
-                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[0]]) {
-                            let tempAction = {
-                                able: true,
-                                puke: [this.pukeInfo.puke[i]]
+                        if(this.numPuke[i] === this.numPokerMap[temp.pokers[ableIndex]]) {
+                            ablePuke.push(this.pukeInfo.puke[i])
+                            ableIndex += 2
+                            if(ableIndex >= temp.pokers.length) {
+                                let tempAction = {
+                                    able: true,
+                                    puke: ablePuke
+                                }
+                                this.action.back = tempAction
+                                break
                             }
-                            this.action.back = tempAction
-                            break
                         }
                     }
                 }

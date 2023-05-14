@@ -259,7 +259,6 @@ export default {
             dom.remove()
         }
     }
-
 }
 </script>
 
