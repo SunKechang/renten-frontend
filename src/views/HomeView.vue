@@ -45,9 +45,11 @@ export default {
 <style scoped>
   .home {
     background-image: url('~@/assets/dogs.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     width: 100%;
     height: 100%;
-    background-size: cover;
     background-color: antiquewhite;
     overflow-x: hidden;
     overflow-y: hidden;

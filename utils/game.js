@@ -38,23 +38,10 @@ let toolPosition = {
 
 let backPoker = 54  // 背面牌
 
+let isPhone = false
+
 const fontSize = 22
 const downFontSize = 21
-
-let pokerGroup
-let playerGroup
-let buttonGroup
-let timerGroup
-let pokerButtonGroup
-let lastPokerGroup
-let scoreGroup
-let extraGroup
-let backGroup
-let scoreTimeGroup
-let failGroup
-let shareGroup
-let tributeGroup
-let preLoadText
 
 function index2Pos(index) {
     if(index === vue.selfInfo.index) {
@@ -70,8 +57,35 @@ function index2Pos(index) {
     return temp
 }
 
+function getAdjustPos(x, y) {
+    if (!isPhone || screen.orientation.angle === 90 || screen.orientation.angle === -90) {
+        return [x, y]
+    } else {
+        return [height-y, x]
+    }
+}
+
+function getAdjustPosX(x, y) {
+    let temp = getAdjustPos(x, y)
+    return temp[0]
+}
+
+function adjustPos(child) {
+    if (!isPhone || screen.orientation.angle === 90 || screen.orientation.angle === -90) {
+        child.x = child.getData('x')
+        child.y = child.getData('y')
+        child.angle = 0
+      } else {
+        child.x = height - child.getData('y')
+        child.y = child.getData('x')
+        child.angle = 90
+    }
+}
+
 function addPoker(that, pokerGroup) {
-    pokerGroup.clear(true, true)
+    if(pokerGroup.children) {
+        pokerGroup.clear(true, true)
+    }
     for (let i=0;i<vue.pukeInfo.puke.length;i++) {
         let x = i*5+15
         let poker = that.add.image(percent2Px(x, true), percent2Px(70, false), 'pokers', vue.pukeInfo.puke[i])
@@ -80,7 +94,6 @@ function addPoker(that, pokerGroup) {
         poker.setData('chosen', false)
         poker.setData('changed', false)
         poker.setData('value', vue.pukeInfo.puke[i])
-        poker.setData('position', {x: x, y: 70})
         poker.setData('size', {w: 10, h: 25})
         poker.on("pointerdown", () => {
             if(vue.roomInfo.status === 3) {
@@ -105,15 +118,25 @@ function addPoker(that, pokerGroup) {
             if(value) {
                 step -= 5
             }
-            that.tweens.add({ targets: gameObject, y: percent2Px(70 + step, false), duration: 150 });
+            let isPortrait = (window.orientation === 0)
+            if(isPortrait) {
+                that.tweens.add({ targets: gameObject, x: getAdjustPosX(poker.getData('x'), poker.getData('y')) - percent2Px(step, false), duration: 150 })
+            } else {
+                that.tweens.add({ targets: gameObject, y: percent2Px(70 + step, false), duration: 150 })
+            }
         })
         pokerGroup.add(poker)
     }
     that.input.on("pointerup", ()=> {
-        let children = pokerGroup.getChildren();
+        let children = pokerGroup.getChildren()
         children.forEach(function(child){
             child.setData('changed', false)
         })
+    })
+    pokerGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
     })
 }
 
@@ -140,13 +163,12 @@ function addButton(content, widthPercent, heightPercent, that) {
         button.setDisplaySize(text.width + 23, text.height + 13)
       });
     button.setInteractive()
-    button.setData('position', {x: widthPercent, y: heightPercent})
-    text.setData('position', {x: button.x, y: button.y})
     text.setData('content', content)
     return {button, text}
 }
 
 function renderPlayer(players, playerGroup, that) {
+    console.log(playerGroup.children.size)
     playerGroup.clear(true, true)
     let index = that.add.text(percent2Px(80, true), percent2Px(10, false), '座位：'+vue.selfInfo.index+'号', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'white'})
     playerGroup.add(index)
@@ -195,6 +217,11 @@ function renderPlayer(players, playerGroup, that) {
         playerGroup.add(player)
         playerGroup.add(text)
     }
+    playerGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderPlayButton(buttonGroup, pokerButtonGroup, that) {
@@ -228,6 +255,11 @@ function renderPlayButton(buttonGroup, pokerButtonGroup, that) {
         case 2:
             break
     }
+    buttonGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderScore(value, scoreGroup, that) {
@@ -243,6 +275,11 @@ function renderScore(value, scoreGroup, that) {
     }
     let winGroup = that.add.text(percent2Px(startX, true), percent2Px(startY + 5*value.players.length, false), '胜方：'+value.result, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'yellow'})
     scoreGroup.add(winGroup)
+    scoreGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderBack(backGroup, that) {
@@ -260,6 +297,11 @@ function renderBack(backGroup, that) {
     })
     backGroup.add(back)
     backGroup.add(home)
+    backGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderShare(value, shareGroup, that) {
@@ -276,6 +318,11 @@ function renderShare(value, shareGroup, that) {
         document.body.removeChild(textarea);
     })
     shareGroup.add(url)
+    shareGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
@@ -291,7 +338,11 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
     restTime.setOrigin(0.5)
     timerGroup.add(timer)
     timerGroup.add(restTime)
-
+    timerGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
     if(value.onTurnIndex !== vue.selfInfo.index || vue.roomInfo.status!== 2) {
         return
     }
@@ -327,12 +378,19 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
     pokerButtonGroup.add(cancelTemp.text)
     pokerButtonGroup.add(runTemp.button)
     pokerButtonGroup.add(runTemp.text)
+
+    pokerButtonGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderLastPoker(value, lastPokerGroup, that) {
     lastPokerGroup.clear(true, true)
-    console.log("rendering")
-    console.log(value)
+    if(value.playerIndex === -1) {
+        return
+    }
     for(let i=0;i<value.pokers.length;i++) {
         let poker = that.add.image(i*percent2Px(3, true), percent2Px(1, false), 'pokers', value.pokers[i])
         poker.setDisplaySize(percent2Px(7, true), percent2Px(20, false))
@@ -340,12 +398,22 @@ function renderLastPoker(value, lastPokerGroup, that) {
     }
     let pos = index2Pos(value.playerIndex)
     lastPokerGroup.incXY(percent2Px(pokerPosition[pos].x, true), percent2Px(pokerPosition[pos].y, false))
+    lastPokerGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderScoreTime(value, scoreTimeGroup, that) {
     scoreTimeGroup.clear(true, true)
     let scoreTime = that.add.text(percent2Px(80, true), percent2Px(15, false), value+'倍', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', color: 'white'})
     scoreTimeGroup.add(scoreTime)
+    scoreTimeGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderExtraButton(value, extraGroup, that) {
@@ -365,6 +433,11 @@ function renderExtraButton(value, extraGroup, that) {
         extraGroup.add(backTemp.button)
         extraGroup.add(backTemp.text)
     }
+    extraGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderFail(value, failGroup, buttonGroup, that) {
@@ -380,12 +453,16 @@ function renderFail(value, failGroup, buttonGroup, that) {
         failGroup.add(createTemp.button)
         failGroup.add(createTemp.text)
     }
+    failGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderTributePoker(tributeGroup, that) {
     tributeGroup.clear(true, true)
     let y = 30
-    console.log("rendering")
     for(let i=0;i<13;i++) {
         let x = i*5 + 15
         let poker = that.add.image(percent2Px(x, true), percent2Px(y, false), 'pokers', backPoker)
@@ -395,6 +472,8 @@ function renderTributePoker(tributeGroup, that) {
         poker.setData('type', 'backPoker')
         poker.setData('position', {x: x, y: y})
         poker.setData('size', {w: 10, h: 25})
+        poker.setData('x', x)
+        poker.setData('y', y)
         poker.on("pointerup", () => {
             let status = poker.getData('chosen')
             tributeGroup.getChildren().forEach(child=> {
@@ -414,10 +493,20 @@ function renderTributePoker(tributeGroup, that) {
             if(value) {
                 step -= 5
             }
-            that.tweens.add({ targets: gameObject, y: percent2Px(y + step, false), duration: 150 });
+            let isPortrait = (window.orientation === 0)
+            if(isPortrait) {
+                that.tweens.add({ targets: gameObject, x: getAdjustPosX(poker.getData('x'), poker.getData('y')) - percent2Px(step, false), duration: 150 })
+            } else {
+                that.tweens.add({ targets: gameObject, y: percent2Px(y + step, false), duration: 150 })
+            }
         })
         tributeGroup.add(poker)
     }
+    tributeGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderTributeButton(tributeGroup, pokerGroup, that) {
@@ -437,17 +526,27 @@ function renderTributeButton(tributeGroup, pokerGroup, that) {
     })
     tributeGroup.add(temp.button)
     tributeGroup.add(temp.text)
+    tributeGroup.children.entries.forEach(child=> {
+        child.setData('x', child.x)
+        child.setData('y', child.y)
+        adjustPos(child)
+    })
 }
 
 function renderTributeAni(value, that) {
     let index = index2Pos(value.fromIndex)
-    let poker = that.add.image(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false), 'pokers', value.poker)
+    let tempPos = getAdjustPos(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false))
+    let poker = that.add.image(tempPos[0], tempPos[1], 'pokers', value.poker)
     poker.setDisplaySize(percent2Px(7, true), percent2Px(17, false))
+    poker.setData('x', poker.x)
+    poker.setData('y', poker.y)
+    adjustPos(poker)
     index = index2Pos(value.toIndex)
+    tempPos = getAdjustPos(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false))
     that.tweens.add({ 
         targets: poker, 
-        x: percent2Px(timerPosition[index].x, true), 
-        y: percent2Px(timerPosition[index].y, false), 
+        x: tempPos[0], 
+        y: tempPos[1], 
         duration: 150,
         onComplete: function () {
             // 延迟3秒后，让物体消失
@@ -466,188 +565,339 @@ function changeGroupVisible(group, visible) {
     })
 }
 
-function preLoadAni(that) {
-    preLoadText = that.add.text(0, 0, '资源加载中', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize: fontSize, fill: 'white' })
+class BootScene extends Phaser.Scene {
+    preload() {
+      // 加载资源
+    }
+  
+    create() {
+        let phone = false
+        let max = document.documentElement.clientWidth, min = document.documentElement.clientHeight
+        if(document.documentElement.clientHeight > document.documentElement.clientWidth) {
+            max = document.documentElement.clientHeight
+            min = document.documentElement.clientWidth
+            phone = true
+        }
+        width = max
+        height = min
+        isPhone = phone
+        window.addEventListener('orientationchange', this.handleOrientationChange.bind(this))
+        let isPortrait = (window.orientation === 0)
+        if (isPortrait && isPhone) {
+        this.scene.run('VerticalScene')
+        } else {
+        this.scene.run('LevelScene')
+        }
+    }
+  
+    handleOrientationChange() {
+        let isPortrait = window.orientation === 0
+        if (isPortrait && isPhone) {
+            let scene = this.scene.get('LevelScene')
+            if(scene && scene.scene.isActive()) {
+                this.scene.stop('LevelScene')
+            }
+            this.scene.run('VerticalScene')
+        } else {
+            let scene = this.scene.get('VerticalScene')
+            if(scene && scene.scene.isActive()) {
+                this.scene.stop('VerticalScene')
+            }
+            this.scene.run('LevelScene')
+        }
+    }
+
+    handleUnload(scenePlugin) {
+        let scenes = scenePlugin.getScenes(false)
+        console.log(scenes)
+        // Remove all scenes
+        scenes.forEach((scene) => {
+        scenePlugin.remove(scene.scene.key)
+        })
+    }
+}
+
+class BaseScene extends Phaser.Scene {
+    constructor(config) {
+        super({key: config.key})
+    }
+    preload() {
+        this.cameras.main.setBackgroundColor('#ccc')
+        this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
+        this.load.image('player', '/resource/player.png')
+        this.load.image('timer', '/resource/timer.png')
+        this.load.image('back', '/resource/back.jpg')
+        this.load.spritesheet('button', '/resource/button.png', { frameWidth: 575, frameHeight: 235})
+        this.load.image('mute', '/resource/mute.png')
+        this.load.image('unmute', '/resource/unmute.png')
+        this.load.image('sound', '/resource/sound.png')
+        this.load.image('nosound', '/resource/nosound.png')
+        this.load.image('home', '/resource/home.png')
+        // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
+    }
+    create() {
+        let that = this
+        this.pokerGroup = this.add.group()
+        this.playerGroup = this.add.group()
+        this.buttonGroup = this.add.group()
+        this.timerGroup = this.add.group()
+        this.pokerButtonGroup = this.add.group()
+        this.lastPokerGroup = this.add.group()
+        this.scoreGroup = this.add.group()
+        this.extraGroup = this.add.group()
+        this.backGroup = this.add.group()
+        this.scoreTimeGroup = this.add.group()
+        this.failGroup = this.add.group()
+        this.shareGroup = this.add.group()
+        this.tributeGroup = this.add.group()
+        this.reconnectGroup = this.add.group()
+        this.toolGroup = this.add.group()
+        if(window.orientation === 0) {
+            // 屏幕处于纵向视图
+            that.scale.setGameSize(height, width)
+        } else {
+            that.scale.setGameSize(width, height)
+        }
+        // 渲染背景
+        renderBack(this.backGroup, this)
+
+        vue.$watch('roomInfo.status', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            if(value === 1) {
+                //游戏开始，清屏
+                this.pokerGroup.clear(true, true)
+                this.timerGroup.clear(true, true)
+                this.pokerButtonGroup.clear(true, true)
+                this.lastPokerGroup.clear(true, true)
+                this.scoreGroup.clear(true, true)
+                this.extraGroup.clear(true, true)
+            }
+        })
+        console.log(this.playerGroup)
+        // 渲染玩家状态
+        vue.$watch('players', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderPlayer(value, that.playerGroup, that)
+        })
+        renderPlayer(vue.players, this.playerGroup, that)
+
+        // 渲染扑克
+        vue.$watch('pukeInfo.puke', ()=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            addPoker(that, this.pokerGroup)
+        })
+        addPoker(that, this.pokerGroup)
+        // 渲染分享链接
+        vue.$watch('roomInfo.roomId', (value)=>{
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderShare(value, this.shareGroup, that)
+        })
+        renderShare(vue.roomInfo.roomId, this.shareGroup, that)
+
+        // 渲染游戏按钮
+        vue.$watch('players', ()=>{
+            if(!that.scene.isActive()) {
+                return
+            }
+            this.failGroup.clear(true, true)
+            renderPlayButton(this.buttonGroup, this.pokerButtonGroup, that)
+        })
+        renderPlayButton(this.buttonGroup, this.pokerButtonGroup, that)
+        // 渲染计时器
+        vue.$watch('playInfo', ()=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            let value = vue.playInfo
+            renderTimer(value, this.timerGroup, this.pokerGroup, this.pokerButtonGroup, that)
+        }, {
+            deep: true
+        })
+        renderTimer(vue.playInfo, this.timerGroup, this.pokerGroup, this.pokerButtonGroup, that)
+        // 渲染上一张牌
+        vue.$watch('lastPoker', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderLastPoker(value, this.lastPokerGroup, that)
+        })
+        renderLastPoker(vue.lastPoker, this.lastPokerGroup, that)
+        // 渲染倍数
+        vue.$watch('roomInfo.scoreTime', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderScoreTime(value, this.scoreTimeGroup, that)
+        })
+        renderScoreTime(vue.roomInfo.scoreTime, this.scoreTimeGroup, that)
+        // 渲染额外操作按钮
+        vue.$watch('action', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderExtraButton(value, this.extraGroup, that)
+        },{
+            deep: true
+        })
+        renderExtraButton(vue.action, this.extraGroup, that)
+        vue.$watch('scoreInfo', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            changeGroupVisible(this.buttonGroup, false)
+            changeGroupVisible(this.extraGroup, false)
+            renderScore(value, this.scoreGroup, that)
+        })
+        vue.$watch('connectFailed', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderFail(value, this.failGroup, this.buttonGroup, that)
+        })
+        // 渲染收、交贡
+        vue.$watch('tribute.status', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            if(!vue.tribute.lord) {
+                return
+            }
+            switch(value) {
+                case 0:
+                    renderTributePoker(this.tributeGroup, that)
+                    break
+                case 1:
+                    renderTributeButton(this.tributeGroup, this.pokerGroup, that)
+                    break
+                case 2:
+                    this.tributeGroup.clear(true, true)
+                    break
+            }
+        })
+        if(vue.tribute.lord) {
+            switch(vue.tribute.status) {
+                case 0:
+                    renderTributePoker(this.tributeGroup, that)
+                    break
+                case 1:
+                    renderTributeButton(this.tributeGroup, this.pokerGroup, that)
+                    break
+                default:
+                    this.tributeGroup.clear(true, true)
+                    break
+            }
+        }
+        
+        // 渲染收、交贡结果
+        vue.$watch('tributeRes', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            renderTributeAni(value, that)
+        })
+        // 渲染系统连接中
+        let connectText = that.add.text(percent2Px(35, true), percent2Px(40, false), '连接中，请稍候', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
+        this.reconnectGroup.add(connectText)
+        this.reconnectGroup.getChildren().forEach(child => {
+            child.visible = false
+        })
+        vue.$watch('reconnecting', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            that.reconnectGroup.getChildren().forEach(child => {
+                child.visible = value
+            })
+        })
+        this.reconnectGroup.children.entries.forEach(child=> {
+            child.setData('x', child.x)
+            child.setData('y', child.y)
+            adjustPos(child)
+        })
+        let audio = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.mic.y, false), 'mute')
+        audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+        audio.setInteractive()
+        audio.on('pointerdown', ()=> {
+            rtc.changeMute()
+        })
+        rtc.$watch('mute', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            if(value) {
+                audio.setTexture('mute')
+                audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+            } else {
+                audio.setTexture('unmute')
+                audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+            }
+        })
+        let sound = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.sound.y, false), 'nosound')
+        sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+        sound.setInteractive()
+        sound.on('pointerdown', ()=> {
+            rtc.changeSound()
+        })
+        rtc.$watch('sound', (value)=> {
+            if(!that.scene.isActive()) {
+                return
+            }
+            if(value) {
+                sound.setTexture('sound')
+                sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+            } else {
+                sound.setTexture('nosound')
+                sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
+            }
+        })
+        this.toolGroup.add(audio)
+        this.toolGroup.add(sound)
+        this.toolGroup.children.entries.forEach(child=> {
+            child.setData('x', child.x)
+            child.setData('y', child.y)
+            adjustPos(child)
+        })
+        vue.updatePhaserStatus()
+    }
+    update() {
+
+    }
+}
+  
+
+class VerticalScene extends BaseScene {
+    constructor() {
+        super({key: "VerticalScene"})
+    }
+}
+
+class LevelScene extends BaseScene {
+    constructor() {
+        super({key: "LevelScene"})
+    }
 }
 
 // 封装初始化游戏为函数
 function initGame() {
-    let game = {
-        width: "100%",
-        height: "100%",
+    let game = new Phaser.Game({
         type: Phaser.AUTO,
-        scene: {
-            preload: function() {
-                preLoadAni(this)
-                this.cameras.main.setBackgroundColor('#ccc')
-                this.load.atlas('pokers', '/resource/pokers.png', '/resource/pokers.json');
-                this.load.image('player', '/resource/player.png')
-                this.load.image('timer', '/resource/timer.png')
-                this.load.image('back', '/resource/back.jpg')
-                this.load.spritesheet('button', '/resource/button.png', { frameWidth: 575, frameHeight: 235})
-                this.load.image('mute', '/resource/mute.png')
-                this.load.image('unmute', '/resource/unmute.png')
-                this.load.image('sound', '/resource/sound.png')
-                this.load.image('nosound', '/resource/nosound.png')
-                this.load.image('home', '/resource/home.png')
-                // this.load.spritesheet('button', 'http://8.130.97.117/red_ten/button.png', { frameWidth: 80, frameHeight: 20});
-            },
-            create: function() {
-                let that = this
-                this.scale.resize(width, height)
-                pokerGroup = this.add.group()
-                playerGroup = this.add.group()
-                buttonGroup = this.add.group()
-                timerGroup = this.add.group()
-                pokerButtonGroup = this.add.group()
-                lastPokerGroup = this.add.group()
-                scoreGroup = this.add.group()
-                extraGroup = this.add.group()
-                backGroup = this.add.group()
-                scoreTimeGroup = this.add.group()
-                failGroup = this.add.group()
-                shareGroup = this.add.group()
-                tributeGroup = this.add.group()
-                let reconnectGroup = this.add.group()
-                // 渲染背景
-                renderBack(backGroup, this)
-                preLoadText.destroy()
-                console.log("loaded back")
-    
-                vue.$watch('roomInfo.status', (value)=> {
-                    if(value === 1) {
-                        //游戏开始，清屏
-                        pokerGroup.clear(true, true)
-                        timerGroup.clear(true, true)
-                        pokerButtonGroup.clear(true, true)
-                        lastPokerGroup.clear(true, true)
-                        scoreGroup.clear(true, true)
-                        extraGroup.clear(true, true)
-                    }
-                })
-                // 渲染玩家状态
-                vue.$watch('players', (value)=> {
-                    renderPlayer(value, playerGroup, that)
-                })
-    
-                // 渲染扑克
-                vue.$watch('pukeInfo.puke', ()=> {
-                    addPoker(that, pokerGroup)
-                })
-    
-                // 渲染分享链接
-                vue.$watch('roomInfo.roomId', (value)=>{
-                    renderShare(value, shareGroup, that)
-                })
-                
-    
-                // 渲染游戏按钮
-                vue.$watch('players', ()=>{
-                    failGroup.clear(true, true)
-                    renderPlayButton(buttonGroup, pokerButtonGroup, that)
-                })
-                
-                // 渲染计时器
-                vue.$watch('playInfo', ()=> {
-                    let value = vue.playInfo
-                    renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that)
-                }, {
-                    deep: true
-                })
-    
-                // 渲染上一张牌
-                vue.$watch('lastPoker', (value)=> {
-                    renderLastPoker(value, lastPokerGroup, that)
-                })
-    
-                // 渲染倍数
-                vue.$watch('roomInfo.scoreTime', (value)=> {
-                    renderScoreTime(value, scoreTimeGroup, that)
-                })
-    
-                // 渲染额外操作按钮
-                vue.$watch('action', (value)=> {
-                    renderExtraButton(value, extraGroup, that)
-                },{
-                    deep: true
-                })
-                vue.$watch('scoreInfo', (value)=> {
-                    changeGroupVisible(buttonGroup, false)
-                    changeGroupVisible(extraGroup, false)
-                    renderScore(value, scoreGroup, that)
-                })
-                vue.$watch('connectFailed', (value)=> {
-                    renderFail(value, failGroup, buttonGroup, that)
-                })
-                // 渲染收、交贡
-                vue.$watch('tribute.status', (value)=> {
-                    if(!vue.tribute.lord) {
-                        return
-                    }
-                    switch(value) {
-                        case 0:
-                            renderTributePoker(tributeGroup, that)
-                            break
-                        case 1:
-                            renderTributeButton(tributeGroup, pokerGroup, that)
-                            break
-                        case 2:
-                            tributeGroup.clear(true, true)
-                            break
-                    }
-                })
-
-                // 渲染收、交贡结果
-                vue.$watch('tributeRes', (value)=> {
-                    renderTributeAni(value, that)
-                })
-                // 渲染系统连接中
-                let connectText = that.add.text(percent2Px(35, true), percent2Px(40, false), '连接中，请稍候', { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif'})
-                reconnectGroup.add(connectText)
-                reconnectGroup.getChildren().forEach(child => {
-                    child.visible = false
-                })
-                vue.$watch('reconnecting', (value)=> {
-                    reconnectGroup.getChildren().forEach(child => {
-                        child.visible = value
-                    })
-                })
-                let audio = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.mic.y, false), 'mute')
-                audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                audio.setInteractive()
-                audio.on('pointerdown', ()=> {
-                    rtc.changeMute()
-                })
-                rtc.$watch('mute', (value)=> {
-                    if(value) {
-                        audio.setTexture('mute')
-                        audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                    } else {
-                        audio.setTexture('unmute')
-                        audio.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                    }
-                })
-                let sound = that.add.image(percent2Px(100, true)-percent2Px(toolPosition.size, false), percent2Px(toolPosition.sound.y, false), 'nosound')
-                sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                sound.setInteractive()
-                sound.on('pointerdown', ()=> {
-                    rtc.changeSound()
-                })
-                rtc.$watch('sound', (value)=> {
-                    if(value) {
-                        sound.setTexture('sound')
-                        sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                    } else {
-                        sound.setTexture('nosound')
-                        sound.setDisplaySize(percent2Px(toolPosition.size, false), percent2Px(toolPosition.size, false))
-                    }
-                })
-                vue.updatePhaserStatus()
-            },
-            update: function() {
-            },
-        }
-    }
+        scale: {
+          mode: Phaser.Scale.EXACT_FIT,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          parent: 'swimmingPlay',
+          width: '100%',
+          height: '100%'
+        },
+        scene: [VerticalScene, LevelScene]
+      })
     return game
 }
 
@@ -658,10 +908,14 @@ export default {
     setWebRTC: function(_rtc) {
         rtc = _rtc
     },
-    setWindow: function(_width, _height) {
+    setWindow: function(_width, _height, phone) {
         width = _width
         height = _height
+        isPhone = phone
         // reRender()
     },
     initGame,
+    getScenes: function() {
+        return [BootScene, VerticalScene, LevelScene]
+    }
 }

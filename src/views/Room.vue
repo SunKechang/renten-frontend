@@ -1,9 +1,5 @@
 <template>
     <div class="home">
-        <ion-phaser 
-            v-bind:game.prop="game"
-            v-bind:initialize.prop="initialize"
-        />
         <WebRTC :sessionId="selfInfo.id" ref="webRTC" @update-able="updateRTCstatux"></WebRTC>
     </div>
 </template>
@@ -11,7 +7,8 @@
 <script>
 import WebRTC from '@/components/WebRTC.vue'
 import utils from '../../utils/decode'
-import phaser from '../../utils/game'
+import game from '../../utils/game'
+import Phaser from 'phaser'
 let pokerPage = 54
 let smallKing = 13*4
 export default {
@@ -19,7 +16,7 @@ export default {
     name: 'RoomView',
     data() {
         return {
-            players: Array,
+            players: [],
             roomInfo: {
                 roomId: 0,
                 roomMaster: 0,
@@ -37,13 +34,13 @@ export default {
             },
             numPuke: [],
             playInfo: {
-                onTurnIndex: 0,
+                onTurnIndex: -1,
                 restTime: 15,
             },
             lastPoker: {
                 action: String,
                 pokers: Array,
-                playerIndex: 0,
+                playerIndex: -1,
             },
             scoreInfo: {
                 players: [],
@@ -61,8 +58,7 @@ export default {
             },
             idMap: new Map,
             numPokerMap: Array,
-            initialize: false,
-            game: phaser.initGame(),    // 初始化游戏时每次获取新的变量
+            game: null,    // 初始化游戏时每次获取新的变量
             reconnecting: false,   // 是否正在重连
             connectFailed: true,   // 当前连接是否失败
             beatInterval: null,  // 心跳循环
@@ -357,6 +353,7 @@ export default {
                         break
                     case 'poker':
                         that.pukeInfo.puke = data.puke.sort(this.compare)
+                        console.log(that.pukeInfo.puke)
                         break
                     case 'useless':
                         alert('无效牌')
@@ -453,15 +450,6 @@ export default {
                 }
             }
         },
-        setWindowInfo() {
-            let max = document.documentElement.clientWidth, min = document.documentElement.clientHeight
-            if(document.documentElement.clientHeight > document.documentElement.clientWidth) {
-                max = document.documentElement.clientHeight
-                min = document.documentElement.clientWidth
-            }
-            phaser.setWindow(max, min)
-            this.initialize = true
-        },
 
         // 封装心跳机制函数
         beat() {
@@ -485,8 +473,7 @@ export default {
         }
     },
     mounted() {
-        phaser.setVue(this)
-        this.setWindowInfo()
+        game.setVue(this)
         this.roomId = this.$route.query.room_id
         this.beatInterval && clearInterval(this.beatInterval)
         let sessionId = sessionStorage.getItem('id')
@@ -523,6 +510,17 @@ export default {
         }
         this.numPokerMap = map
         this.updateMainStatus()
+        this.game = new Phaser.Game({
+            type: Phaser.AUTO,
+            scale: {
+                mode: Phaser.Scale.EXACT_FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                parent: 'room',
+                width: '100%',
+                height: '100%'
+            },
+            scene: game.getScenes()
+        })
     },
     beforeDestroy() {
         // 用户手动退出，关闭websocket连接
@@ -530,6 +528,7 @@ export default {
             this.$global.ws.close(1000, "正常关闭")
         }
         this.$global.setWs(null)
+        this.game.destroy(true)
         // 设置game为null，再次加载时获取新的game变量，解决BUG[再次进入/room界面空白]
         this.game = null
         this.beatInterval && clearInterval(this.beatInterval)
