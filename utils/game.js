@@ -387,6 +387,10 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
 }
 
 function renderLastPoker(value, lastPokerGroup, that) {
+    if(value.pokers.length === 0 && value.action !== 'nextTurn') {
+        // 中间有人过，不能擦掉之前的lastPoker
+        return
+    }
     lastPokerGroup.clear(true, true)
     if(value.playerIndex === -1) {
         return
@@ -667,12 +671,12 @@ class BaseScene extends Phaser.Scene {
             }
             if(value === 1) {
                 //游戏开始，清屏
-                this.pokerGroup.clear(true, true)
-                this.timerGroup.clear(true, true)
-                this.pokerButtonGroup.clear(true, true)
-                this.lastPokerGroup.clear(true, true)
-                this.scoreGroup.clear(true, true)
-                this.extraGroup.clear(true, true)
+                that.pokerGroup.clear(true, true)
+                that.timerGroup.clear(true, true)
+                that.pokerButtonGroup.clear(true, true)
+                that.lastPokerGroup.clear(true, true)
+                that.scoreGroup.clear(true, true)
+                that.extraGroup.clear(true, true)
             }
         })
         console.log(this.playerGroup)
@@ -690,7 +694,7 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            addPoker(that, this.pokerGroup)
+            addPoker(that, that.pokerGroup)
         })
         addPoker(that, this.pokerGroup)
         // 渲染分享链接
@@ -698,7 +702,7 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            renderShare(value, this.shareGroup, that)
+            renderShare(value, that.shareGroup, that)
         })
         renderShare(vue.roomInfo.roomId, this.shareGroup, that)
 
@@ -707,8 +711,8 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            this.failGroup.clear(true, true)
-            renderPlayButton(this.buttonGroup, this.pokerButtonGroup, that)
+            that.failGroup.clear(true, true)
+            renderPlayButton(that.buttonGroup, that.pokerButtonGroup, that)
         })
         renderPlayButton(this.buttonGroup, this.pokerButtonGroup, that)
         // 渲染计时器
@@ -717,7 +721,7 @@ class BaseScene extends Phaser.Scene {
                 return
             }
             let value = vue.playInfo
-            renderTimer(value, this.timerGroup, this.pokerGroup, this.pokerButtonGroup, that)
+            renderTimer(value, that.timerGroup, that.pokerGroup, that.pokerButtonGroup, that)
         }, {
             deep: true
         })
@@ -727,7 +731,7 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            renderLastPoker(value, this.lastPokerGroup, that)
+            renderLastPoker(value, that.lastPokerGroup, that)
         })
         renderLastPoker(vue.lastPoker, this.lastPokerGroup, that)
         // 渲染倍数
@@ -735,7 +739,7 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            renderScoreTime(value, this.scoreTimeGroup, that)
+            renderScoreTime(value, that.scoreTimeGroup, that)
         })
         renderScoreTime(vue.roomInfo.scoreTime, this.scoreTimeGroup, that)
         // 渲染额外操作按钮
@@ -743,7 +747,7 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            renderExtraButton(value, this.extraGroup, that)
+            renderExtraButton(value, that.extraGroup, that)
         },{
             deep: true
         })
@@ -752,15 +756,16 @@ class BaseScene extends Phaser.Scene {
             if(!that.scene.isActive()) {
                 return
             }
-            changeGroupVisible(this.buttonGroup, false)
-            changeGroupVisible(this.extraGroup, false)
-            renderScore(value, this.scoreGroup, that)
+            changeGroupVisible(that.buttonGroup, false)
+            changeGroupVisible(that.extraGroup, false)
+            changeGroupVisible(that.pokerButtonGroup, false)
+            renderScore(value, that.scoreGroup, that)
         })
         vue.$watch('connectFailed', (value)=> {
             if(!that.scene.isActive()) {
                 return
             }
-            renderFail(value, this.failGroup, this.buttonGroup, that)
+            renderFail(value, that.failGroup, that.buttonGroup, that)
         })
         // 渲染收、交贡
         vue.$watch('tribute.status', (value)=> {
@@ -772,26 +777,26 @@ class BaseScene extends Phaser.Scene {
             }
             switch(value) {
                 case 0:
-                    renderTributePoker(this.tributeGroup, that)
+                    renderTributePoker(that.tributeGroup, that)
                     break
                 case 1:
-                    renderTributeButton(this.tributeGroup, this.pokerGroup, that)
+                    renderTributeButton(that.tributeGroup, that.pokerGroup, that)
                     break
                 case 2:
-                    this.tributeGroup.clear(true, true)
+                    that.tributeGroup.clear(true, true)
                     break
             }
         })
         if(vue.tribute.lord) {
             switch(vue.tribute.status) {
                 case 0:
-                    renderTributePoker(this.tributeGroup, that)
+                    renderTributePoker(that.tributeGroup, that)
                     break
                 case 1:
-                    renderTributeButton(this.tributeGroup, this.pokerGroup, that)
+                    renderTributeButton(that.tributeGroup, that.pokerGroup, that)
                     break
                 default:
-                    this.tributeGroup.clear(true, true)
+                    that.tributeGroup.clear(true, true)
                     break
             }
         }

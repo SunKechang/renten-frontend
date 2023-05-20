@@ -334,9 +334,9 @@ export default {
                         that.selfInfo.status = data.players[that.getIndexById(that.selfInfo.id)].status
                         break
                     case 'card':
-                        if (data.max_action.pokers.length === 0) {
-                            return
-                        }
+                        // if (data.max_action.pokers.length === 0) {
+                        //     return
+                        // }
                         that.roomInfo.scoreTime = data.score_times
                         temp = {
                             action: data.max_action.action,
@@ -357,14 +357,6 @@ export default {
                         break
                     case 'useless':
                         alert('无效牌')
-                        break
-                    case 'nextTurn':
-                        temp = {
-                            action: "nextTurn",
-                            pokers: [],
-                            playerIndex: 0,
-                        },
-                        that.lastPoker = temp
                         break
                     case 'score':
                         that.roomInfo.scoreTime = 1
