@@ -222,6 +222,11 @@ export default {
             this.roomInfo.status = 0
             this.action.back.able = false
             this.action.break.able = false
+            this.lastPoker = {
+                action: String,
+                pokers: Array,
+                playerIndex: -1,
+            }
         },
         updateRTCstatux() {
             this.able.webRTCAble = true

@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+// import * as PIXI from 'pixi.js'
 let vue, rtc
 let height, width
 let percent2Px = function(num, isWidth) {
@@ -89,7 +90,7 @@ function addPoker(that, pokerGroup) {
     for (let i=0;i<vue.pukeInfo.puke.length;i++) {
         let x = i*5+15
         let poker = that.add.image(percent2Px(x, true), percent2Px(70, false), 'pokers', vue.pukeInfo.puke[i])
-        poker.setDisplaySize(percent2Px(10, true), percent2Px(25, false))
+        poker.setDisplaySize(percent2Px(18, false), percent2Px(25, false))
         poker.setInteractive()
         poker.setData('chosen', false)
         poker.setData('changed', false)
@@ -539,15 +540,14 @@ function renderTributeButton(tributeGroup, pokerGroup, that) {
 
 function renderTributeAni(value, that) {
     let index = index2Pos(value.fromIndex)
-    let tempPos = getAdjustPos(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false))
-    let poker = that.add.image(tempPos[0], tempPos[1], 'pokers', value.poker)
+    let poker = that.add.image(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false), 'pokers', value.poker)
     poker.setDisplaySize(percent2Px(7, true), percent2Px(17, false))
     poker.setData('x', poker.x)
     poker.setData('y', poker.y)
     adjustPos(poker)
     index = index2Pos(value.toIndex)
-    tempPos = getAdjustPos(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false))
-    that.tweens.add({ 
+    let tempPos = getAdjustPos(percent2Px(timerPosition[index].x, true), percent2Px(timerPosition[index].y, false))
+    that.tweens.add({
         targets: poker, 
         x: tempPos[0], 
         y: tempPos[1], 
