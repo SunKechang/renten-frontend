@@ -38,7 +38,7 @@ export default {
                 restTime: 15,
             },
             lastPoker: {
-                action: String,
+                action: 'nextTurn',
                 pokers: Array,
                 playerIndex: -1,
             },
@@ -223,7 +223,7 @@ export default {
             this.action.back.able = false
             this.action.break.able = false
             this.lastPoker = {
-                action: String,
+                action: 'nextTurn',
                 pokers: Array,
                 playerIndex: -1,
             }

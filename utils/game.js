@@ -348,7 +348,7 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
         return
     }
     pokerButtonGroup.clear(true, true)
-    let cancelTemp = addButton('重选', 25, 60, that)
+    let cancelTemp = addButton('重选', 55, 60, that)
     let runTemp = addButton('出牌', 40, 60, that)
     cancelTemp.button.on('pointerdown', ()=> {
         pokerGroup.getChildren().forEach((poker)=> {
@@ -367,7 +367,7 @@ function renderTimer(value, timerGroup, pokerGroup, pokerButtonGroup, that) {
         vue.sendPoker(chosenPokers)
     })
     if(vue.lastPoker.action !== 'nextTurn' && vue.lastPoker.action !== 'break' && vue.lastPoker.action !== 'back') {
-        let passTemp = addButton('过', 55, 60, that)
+        let passTemp = addButton('过', 25, 60, that)
         passTemp.button.on('pointerdown', ()=> {
             vue.sendPass()
         })
